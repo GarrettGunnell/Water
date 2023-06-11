@@ -14,33 +14,36 @@ public class Water : MonoBehaviour {
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
         mesh.name = "Water";
 
+        float halfRes = quadRes * 0.5f;
         vertices = new Vector3[(quadRes + 1) * (quadRes + 1)];
+        Vector2[] uv = new Vector2[vertices.Length];
         for (int i = 0, x = 0; x <= quadRes; ++x) {
             for (int z = 0; z <= quadRes; ++z, ++i) {
-                vertices[i] = new Vector3(x, 0, z);
+                vertices[i] = new Vector3(x - halfRes, 0, z - halfRes);
+                uv[i] = new Vector2((float)x / quadRes, (float)z / quadRes);
             }
         }
 
         mesh.vertices = vertices;
+        mesh.uv = uv;
 
         int[] triangles = new int[quadRes * quadRes * 6];
 
         for (int ti = 0, vi = 0, x = 0; x < quadRes; ++vi, ++x) {
             for (int z = 0; z < quadRes; ti += 6, ++vi, ++z) {
                 triangles[ti] = vi;
-                triangles[ti + 1] = triangles[ti + 3] = vi + 1;
-                triangles[ti + 2] = triangles[ti + 5] = vi + quadRes + 1;
+                triangles[ti + 1] = vi + 1;
+                triangles[ti + 2] = vi + quadRes + 2;
+                triangles[ti + 3] = vi;
                 triangles[ti + 4] = vi + quadRes + 2;
+                triangles[ti + 5] = vi + quadRes + 1;
             }
         }
 
         mesh.triangles = triangles;
-
         mesh.RecalculateNormals();
 
-        Vector3[] normals = mesh.normals;
 
-        Debug.Log(normals[0].ToString());
     }
 
     void OnEnable() {
@@ -56,6 +59,6 @@ public class Water : MonoBehaviour {
 
         Gizmos.color = Color.black;
         for (int i = 0; i < vertices.Length; ++i)
-            Gizmos.DrawSphere(vertices[i], 0.1f);
+            Gizmos.DrawSphere(transform.TransformPoint(vertices[i]), 0.1f);
     }
 }
