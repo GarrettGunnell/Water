@@ -9,6 +9,12 @@ public class Water : MonoBehaviour {
     public int planeLength = 10;
     public int quadRes = 10;
 
+    [Range(0.01f, 5.0f)]
+    public float amplitude = 1.0f;
+
+    [Range(0.01f, 3.0f)]
+    public float frequency = 1.0f;
+
     private Material waterMaterial;
     private Mesh mesh;
     private Vector3[] vertices;
@@ -72,7 +78,7 @@ public class Water : MonoBehaviour {
             for (int i = 0; i < vertices.Length; ++i) {
                 Vector3 v = vertices[i];
 
-                v.y = Mathf.Sin(0.5f * v.x + Time.time) * 0.5f;
+                v.y = Mathf.Sin(frequency * v.x + Time.time) * amplitude;
                 vertices[i] = v;
             }
 
