@@ -1,58 +1,53 @@
-Shader "Unlit/Water"
-{
-    Properties
-    {
-        _MainTex ("Texture", 2D) = "white" {}
-    }
-    SubShader
-    {
-        Tags { "RenderType"="Opaque" }
-        LOD 100
+Shader "Custom/Water" {
+	SubShader {
+		Pass {
+			Tags {
+				"RenderType" = "Opaque"
+                "LightMode" = "ForwardBase"
+			}
 
-        Pass
-        {
-            CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-            // make fog work
-            #pragma multi_compile_fog
+			CGPROGRAM
 
-            #include "UnityCG.cginc"
+			#pragma vertex vp
+			#pragma fragment fp
 
-            struct appdata
-            {
-                float4 vertex : POSITION;
-                float2 uv : TEXCOORD0;
-            };
+			#include "UnityPBSLighting.cginc"
+            #include "AutoLight.cginc"
 
-            struct v2f
-            {
-                float2 uv : TEXCOORD0;
-                UNITY_FOG_COORDS(1)
-                float4 vertex : SV_POSITION;
-            };
+			struct VertexData {
+				float4 vertex : POSITION;
+				float3 normal : NORMAL;
+			};
 
-            sampler2D _MainTex;
-            float4 _MainTex_ST;
+			struct v2f {
+				float4 pos : SV_POSITION;
+				float3 normal : TEXCOORD1;
+				float3 worldPos : TEXCOORD2;
+			};
 
-            v2f vert (appdata v)
-            {
-                v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                UNITY_TRANSFER_FOG(o,o.vertex);
-                return o;
-            }
+			v2f vp(VertexData v) {
+				v2f i;
+				i.pos = UnityObjectToClipPos(v.vertex);
+				i.worldPos = mul(unity_ObjectToWorld, v.vertex);
+				i.normal = normalize(UnityObjectToWorldNormal(v.normal));
 
-            fixed4 frag (v2f i) : SV_Target
-            {
-                // sample the texture
-                fixed4 col = tex2D(_MainTex, i.uv);
-                // apply fog
-                UNITY_APPLY_FOG(i.fogCoord, col);
-                return col;
-            }
-            ENDCG
-        }
-    }
+				return i;
+			}
+
+			float4 fp(v2f i) : SV_TARGET {
+                float3 lightDir = _WorldSpaceLightPos0;
+                float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
+                float3 halfwayDir = normalize(lightDir + viewDir);
+
+                float3 ambient = float3(0.0f, 0.0f, 0.0f);
+                float3 diffuse = _LightColor0.rgb * DotClamped(lightDir, normalize(i.normal));
+                float specular = _LightColor0.rgb * pow(DotClamped(i.normal, halfwayDir), 50.0f);
+
+
+                return float4(saturate(ambient + diffuse + specular), 1.0f);
+			}
+
+			ENDCG
+		}
+	}
 }
