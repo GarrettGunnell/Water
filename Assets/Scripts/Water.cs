@@ -4,9 +4,11 @@ using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class Water : MonoBehaviour {
+    public Shader waterShader;
 
     public int quadRes = 10;
 
+    private Material waterMaterial;
     private Mesh mesh;
     private Vector3[] vertices;
 
@@ -17,15 +19,19 @@ public class Water : MonoBehaviour {
         float halfRes = quadRes * 0.5f;
         vertices = new Vector3[(quadRes + 1) * (quadRes + 1)];
         Vector2[] uv = new Vector2[vertices.Length];
+        Vector4[] tangents = new Vector4[vertices.Length];
+        Vector4 tangent = new Vector4(1f, 0f, 0f, -1f);
         for (int i = 0, x = 0; x <= quadRes; ++x) {
             for (int z = 0; z <= quadRes; ++z, ++i) {
                 vertices[i] = new Vector3(x - halfRes, 0, z - halfRes);
                 uv[i] = new Vector2((float)x / quadRes, (float)z / quadRes);
+                tangents[i] = tangent;
             }
         }
 
         mesh.vertices = vertices;
         mesh.uv = uv;
+        mesh.tangents = tangents;
 
         int[] triangles = new int[quadRes * quadRes * 6];
 
@@ -42,16 +48,38 @@ public class Water : MonoBehaviour {
 
         mesh.triangles = triangles;
         mesh.RecalculateNormals();
+    }
 
+    void CreateMaterial() {
+        if (waterShader == null) return;
+        if (waterMaterial != null) return;
 
+        waterMaterial = new Material(waterShader);
+        MeshRenderer renderer = GetComponent<MeshRenderer>();
+
+        renderer.material = waterMaterial;
     }
 
     void OnEnable() {
         CreateWaterPlane();
+        CreateMaterial();
     }
 
     void Update() {
         
+    }
+
+    void OnDisable() {
+        if (waterMaterial != null) {
+            Destroy(waterMaterial);
+            waterMaterial = null;
+        }
+
+        if (mesh != null) {
+            Destroy(mesh);
+            mesh = null;
+            vertices = null;
+        }
     }
 
     private void OnDrawGizmos() {
