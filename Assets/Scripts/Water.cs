@@ -18,6 +18,7 @@ public class Water : MonoBehaviour {
     private Material waterMaterial;
     private Mesh mesh;
     private Vector3[] vertices;
+    private Vector3[] normals;
 
     private void CreateWaterPlane() {
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
@@ -56,6 +57,7 @@ public class Water : MonoBehaviour {
 
         mesh.triangles = triangles;
         mesh.RecalculateNormals();
+        normals = mesh.normals;
     }
 
     void CreateMaterial() {
@@ -76,14 +78,21 @@ public class Water : MonoBehaviour {
     void Update() {
         if (vertices != null) {
             for (int i = 0; i < vertices.Length; ++i) {
-                Vector3 v = vertices[i];
+                Vector3 v = transform.TransformPoint(vertices[i]);
 
-                v.y = Mathf.Sin(frequency * v.x + Time.time) * amplitude;
-                vertices[i] = v;
+                float h = Mathf.Sin(frequency * (v.x + v.z) + Time.time) * amplitude;
+                vertices[i].y = h;
+
+                float dx = frequency * amplitude * Mathf.Cos((v.x + v.z) * frequency + Time.time);
+                float dy = frequency * amplitude * Mathf.Cos((v.x + v.z) * frequency + Time.time);
+                Vector3 n = new Vector3(-dx, 1, -dy);
+                n.Normalize();
+
+                normals[i] = n;
             }
 
             mesh.vertices = vertices;
-            mesh.RecalculateNormals();
+            mesh.normals = normals;
         }
     }
 
@@ -103,8 +112,11 @@ public class Water : MonoBehaviour {
     private void OnDrawGizmos() {
         if (vertices == null) return;
 
-        Gizmos.color = Color.black;
-        for (int i = 0; i < vertices.Length; ++i)
+        for (int i = 0; i < vertices.Length; ++i) {
+            Gizmos.color = Color.black;
             Gizmos.DrawSphere(transform.TransformPoint(vertices[i]), 0.1f);
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawRay(transform.TransformPoint(vertices[i]), normals[i]);
+        }
     }
 }
