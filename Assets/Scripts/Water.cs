@@ -9,6 +9,9 @@ public class Water : MonoBehaviour {
     public int planeLength = 10;
     public int quadRes = 10;
 
+    [Range(0.0f, 360.0f)]
+    public float direction = 0.0f;
+
     [Range(0.01f, 5.0f)]
     public float speed = 1.0f;
 
@@ -22,11 +25,14 @@ public class Water : MonoBehaviour {
         public float frequency;
         public float amplitude;
         public float phase;
+        public Vector2 direction;
 
-        public Wave(float wavelength, float amplitude, float speed) {
+        public Wave(float wavelength, float amplitude, float speed, float direction) {
             this.frequency = 2.0f / wavelength;
             this.amplitude = amplitude;
             this.phase = speed * 2.0f / wavelength;
+
+            this.direction = new Vector2(Mathf.Cos(Mathf.Deg2Rad * direction), Mathf.Sin(Mathf.Deg2Rad * direction));
         }
     }
 
@@ -93,17 +99,19 @@ public class Water : MonoBehaviour {
     }
 
     void Update() {
-        Wave w = new Wave(wavelength, amplitude, speed);
+        Wave w = new Wave(wavelength, amplitude, speed, direction);
 
         if (vertices != null) {
             for (int i = 0; i < vertices.Length; ++i) {
                 Vector3 v = transform.TransformPoint(vertices[i]);
+                v.x *= w.direction.x;
+                v.z *= w.direction.y;
 
                 float h = Mathf.Sin(w.frequency * (v.x + v.z) + Time.time * w.phase) * w.amplitude;
                 vertices[i].y = h;
 
-                float dx = w.frequency * w.amplitude * Mathf.Cos((v.x + v.z) * w.frequency + Time.time * w.phase);
-                float dy = w.frequency * w.amplitude * Mathf.Cos((v.x + v.z) * w.frequency + Time.time * w.phase);
+                float dx = w.frequency * w.amplitude * w.direction.x * Mathf.Cos((v.x + v.z) * w.frequency + Time.time * w.phase);
+                float dy = w.frequency * w.amplitude * w.direction.y * Mathf.Cos((v.x + v.z) * w.frequency + Time.time * w.phase);
                 Vector3 n = new Vector3(-dx, 1, -dy);
                 n.Normalize();
 
