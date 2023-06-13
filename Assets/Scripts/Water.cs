@@ -10,10 +10,27 @@ public class Water : MonoBehaviour {
     public int quadRes = 10;
 
     [Range(0.01f, 5.0f)]
+    public float speed = 1.0f;
+
+    [Range(0.01f, 5.0f)]
     public float amplitude = 1.0f;
 
     [Range(0.01f, 3.0f)]
-    public float frequency = 1.0f;
+    public float wavelength = 1.0f;
+
+    private struct Wave {
+        public float frequency;
+        public float amplitude;
+        public float phase;
+
+        public Wave(float wavelength, float amplitude, float speed) {
+            this.frequency = 2.0f / wavelength;
+            this.amplitude = amplitude;
+            this.phase = speed * 2.0f / wavelength;
+        }
+    }
+
+    Wave wave;
 
     private Material waterMaterial;
     private Mesh mesh;
@@ -76,15 +93,17 @@ public class Water : MonoBehaviour {
     }
 
     void Update() {
+        Wave w = new Wave(wavelength, amplitude, speed);
+
         if (vertices != null) {
             for (int i = 0; i < vertices.Length; ++i) {
                 Vector3 v = transform.TransformPoint(vertices[i]);
 
-                float h = Mathf.Sin(frequency * (v.x + v.z) + Time.time) * amplitude;
+                float h = Mathf.Sin(w.frequency * (v.x + v.z) + Time.time * w.phase) * w.amplitude;
                 vertices[i].y = h;
 
-                float dx = frequency * amplitude * Mathf.Cos((v.x + v.z) * frequency + Time.time);
-                float dy = frequency * amplitude * Mathf.Cos((v.x + v.z) * frequency + Time.time);
+                float dx = w.frequency * w.amplitude * Mathf.Cos((v.x + v.z) * w.frequency + Time.time * w.phase);
+                float dy = w.frequency * w.amplitude * Mathf.Cos((v.x + v.z) * w.frequency + Time.time * w.phase);
                 Vector3 n = new Vector3(-dx, 1, -dy);
                 n.Normalize();
 
