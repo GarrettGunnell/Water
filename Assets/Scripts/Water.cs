@@ -9,6 +9,12 @@ public class Water : MonoBehaviour {
     public int planeLength = 10;
     public int quadRes = 10;
 
+    public enum WaveType {
+        Sine = 0,
+        SteepSine,
+        Gerstner
+    }; public WaveType waveType;
+
     [Range(0.0f, 360.0f)]
     public float direction = 0.0f;
 
@@ -21,27 +27,31 @@ public class Water : MonoBehaviour {
     [Range(0.01f, 3.0f)]
     public float wavelength = 1.0f;
 
+    [Range(1.0f, 5.0f)]
+    public float steepness = 1.0f;
+
     private struct Wave {
         public float frequency;
         public float amplitude;
         public float phase;
+        public float steepness;
         public Vector2 direction;
 
-        public Wave(float wavelength, float amplitude, float speed, float direction) {
+        public Wave(float wavelength, float amplitude, float speed, float direction, float steepness) {
             this.frequency = 2.0f / wavelength;
             this.amplitude = amplitude;
             this.phase = speed * 2.0f / wavelength;
+            this.steepness = steepness;
 
             this.direction = new Vector2(Mathf.Cos(Mathf.Deg2Rad * direction), Mathf.Sin(Mathf.Deg2Rad * direction));
             this.direction.Normalize();
         }
 
         public float Sine(Vector3 v) {
-            Vector3 dv = v;
-            dv.x *= this.direction.x;
-            dv.z *= this.direction.y;
+            v.x *= this.direction.x;
+            v.z *= this.direction.y;
 
-            return Mathf.Sin(this.frequency * (dv.x + dv.z) + Time.time * this.phase) * this.amplitude;
+            return Mathf.Sin(this.frequency * (v.x + v.z) + Time.time * this.phase) * this.amplitude;
         }
 
         public Vector2 SineNormal(Vector3 v) {
@@ -50,6 +60,24 @@ public class Water : MonoBehaviour {
 
             float dx = this.frequency * this.amplitude * this.direction.x * Mathf.Cos((v.x + v.z) * this.frequency + Time.time * this.phase);
             float dy = this.frequency * this.amplitude * this.direction.y * Mathf.Cos((v.x + v.z) * this.frequency + Time.time * this.phase);
+
+            return new Vector2(dx, dy);
+        }
+
+        public float SteepSine(Vector3 v) {
+            v.x *= this.direction.x;
+            v.z *= this.direction.y;
+
+            return 2 * this.amplitude * Mathf.Pow((Mathf.Sin((v.x + v.z) * this.frequency + Time.time * this.phase) + 1) / 2.0f, this.steepness);
+        }
+
+        public Vector2 SteepSineNormal(Vector3 v) {
+            v.x *= this.direction.x;
+            v.z *= this.direction.y;
+
+            float h = 2 * this.amplitude * Mathf.Pow((Mathf.Sin((v.x + v.z) * this.frequency + Time.time * this.phase) + 1) / 2.0f, this.steepness - 1);
+            float dx = this.steepness * this.direction.x * this.frequency * this.amplitude * h * Mathf.Cos((v.x + v.z) * this.frequency + Time.time * this.phase);
+            float dy = this.steepness * this.direction.y * this.frequency * this.amplitude * h * Mathf.Cos((v.x + v.z) * this.frequency + Time.time * this.phase);
 
             return new Vector2(dx, dy);
         }
@@ -118,14 +146,22 @@ public class Water : MonoBehaviour {
     }
 
     void Update() {
-        Wave w = new Wave(wavelength, amplitude, speed, direction);
+        Wave w = new Wave(wavelength, amplitude, speed, direction, steepness);
 
         if (vertices != null) {
             for (int i = 0; i < vertices.Length; ++i) {
                 Vector3 v = transform.TransformPoint(vertices[i]);
 
-                vertices[i].y = w.Sine(v);
-                Vector2 normal = w.SineNormal(v);
+                if (waveType == WaveType.Sine)
+                    vertices[i].y = w.Sine(v);
+                else if (waveType == WaveType.SteepSine)
+                    vertices[i].y = w.SteepSine(v);
+
+                Vector3 normal = new Vector3(0.0f, 1.0f, 0.0f);
+                if (waveType == WaveType.Sine)
+                    normal = w.SineNormal(v);
+                else if (waveType == WaveType.SteepSine)
+                    normal = w.SteepSineNormal(v);
                 
                 normals[i] = new Vector3(-normal.x, 1.0f, -normal.y);
                 normals[i].Normalize();
