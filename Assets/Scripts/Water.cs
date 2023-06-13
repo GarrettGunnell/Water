@@ -33,6 +33,25 @@ public class Water : MonoBehaviour {
             this.phase = speed * 2.0f / wavelength;
 
             this.direction = new Vector2(Mathf.Cos(Mathf.Deg2Rad * direction), Mathf.Sin(Mathf.Deg2Rad * direction));
+            this.direction.Normalize();
+        }
+
+        public float Sine(Vector3 v) {
+            Vector3 dv = v;
+            dv.x *= this.direction.x;
+            dv.z *= this.direction.y;
+
+            return Mathf.Sin(this.frequency * (dv.x + dv.z) + Time.time * this.phase) * this.amplitude;
+        }
+
+        public Vector2 SineNormal(Vector3 v) {
+            v.x *= this.direction.x;
+            v.z *= this.direction.y;
+
+            float dx = this.frequency * this.amplitude * this.direction.x * Mathf.Cos((v.x + v.z) * this.frequency + Time.time * this.phase);
+            float dy = this.frequency * this.amplitude * this.direction.y * Mathf.Cos((v.x + v.z) * this.frequency + Time.time * this.phase);
+
+            return new Vector2(dx, dy);
         }
     }
 
@@ -104,18 +123,12 @@ public class Water : MonoBehaviour {
         if (vertices != null) {
             for (int i = 0; i < vertices.Length; ++i) {
                 Vector3 v = transform.TransformPoint(vertices[i]);
-                v.x *= w.direction.x;
-                v.z *= w.direction.y;
 
-                float h = Mathf.Sin(w.frequency * (v.x + v.z) + Time.time * w.phase) * w.amplitude;
-                vertices[i].y = h;
-
-                float dx = w.frequency * w.amplitude * w.direction.x * Mathf.Cos((v.x + v.z) * w.frequency + Time.time * w.phase);
-                float dy = w.frequency * w.amplitude * w.direction.y * Mathf.Cos((v.x + v.z) * w.frequency + Time.time * w.phase);
-                Vector3 n = new Vector3(-dx, 1, -dy);
-                n.Normalize();
-
-                normals[i] = n;
+                vertices[i].y = w.Sine(v);
+                Vector2 normal = w.SineNormal(v);
+                
+                normals[i] = new Vector3(-normal.x, 1.0f, -normal.y);
+                normals[i].Normalize();
             }
 
             mesh.vertices = vertices;
