@@ -157,10 +157,14 @@ MonoBehaviour:
   waterShader: {fileID: 4800000, guid: deb3f4534786e214ca970c02d4c381f4, type: 3}
   planeLength: 10
   quadRes: 10
+  waveFunction: 2
+  waveType: 0
   direction: 0
+  origin: {x: 0, y: 0}
   speed: 1
   amplitude: 1
   wavelength: 1
+  steepness: 1
 --- !u!23 &19044810
 MeshRenderer:
   m_ObjectHideFlags: 0

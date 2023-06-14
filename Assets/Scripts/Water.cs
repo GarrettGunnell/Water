@@ -14,7 +14,9 @@ public class Water : MonoBehaviour {
         Sine = 0,
         SteepSine,
         Gerstner
-    }; public WaveFunction waveFunction;
+    }; 
+    [Header("Wave One")]
+    public WaveFunction waveFunction;
     
     public enum WaveType {
         Directional = 0,
@@ -48,7 +50,7 @@ public class Water : MonoBehaviour {
         public Vector2 origin;
 
         public Wave(float wavelength, float amplitude, float speed, float direction, float steepness, WaveType waveType, Vector2 origin) {
-            this.frequency = waveType == WaveType.Circular ? -2.0f / wavelength : 2.0f / wavelength;
+            this.frequency = 2.0f / wavelength;
             this.amplitude = amplitude;
             this.phase = speed * 2.0f / wavelength;
             this.steepness = steepness;
@@ -84,19 +86,23 @@ public class Water : MonoBehaviour {
             return v.x * d.x + v.z * d.y;
         }
 
+        public float GetTime() {
+            return waveType == WaveType.Circular ? -Time.time * this.phase : Time.time * this.phase;
+        }
+
         public float Sine(Vector3 v) {
             Vector2 d = GetDirection(v);
             float xz = GetWaveCoord(v, d);
 
-            return Mathf.Sin(this.frequency * xz + Time.time * this.phase) * this.amplitude;
+            return Mathf.Sin(this.frequency * xz + GetTime()) * this.amplitude;
         }
 
         public Vector2 SineNormal(Vector3 v) {
             Vector2 d = GetDirection(v);
             float xz = GetWaveCoord(v, d);
 
-            float dx = this.frequency * this.amplitude * d.x * Mathf.Cos(xz * this.frequency + Time.time * this.phase);
-            float dy = this.frequency * this.amplitude * d.y * Mathf.Cos(xz * this.frequency + Time.time * this.phase);
+            float dx = this.frequency * this.amplitude * d.x * Mathf.Cos(xz * this.frequency + GetTime());
+            float dy = this.frequency * this.amplitude * d.y * Mathf.Cos(xz * this.frequency + GetTime());
 
             return new Vector2(dx, dy);
         }
@@ -105,16 +111,16 @@ public class Water : MonoBehaviour {
             Vector2 d = GetDirection(v);
             float xz = GetWaveCoord(v, d);
 
-            return 2 * this.amplitude * Mathf.Pow((Mathf.Sin(xz * this.frequency + Time.time * this.phase) + 1) / 2.0f, this.steepness);
+            return 2 * this.amplitude * Mathf.Pow((Mathf.Sin(xz * this.frequency + GetTime()) + 1) / 2.0f, this.steepness);
         }
 
         public Vector2 SteepSineNormal(Vector3 v) {
             Vector2 d = GetDirection(v);
             float xz = GetWaveCoord(v, d);
 
-            float h = 2 * this.amplitude * Mathf.Pow((Mathf.Sin(xz * this.frequency + Time.time * this.phase) + 1) / 2.0f, this.steepness - 1);
-            float dx = this.steepness * d.x * this.frequency * this.amplitude * h * Mathf.Cos(xz * this.frequency + Time.time * this.phase);
-            float dy = this.steepness * d.y * this.frequency * this.amplitude * h * Mathf.Cos(xz * this.frequency + Time.time * this.phase);
+            float h = 2 * this.amplitude * Mathf.Pow((Mathf.Sin(xz * this.frequency + GetTime()) + 1) / 2.0f, this.steepness - 1);
+            float dx = this.steepness * d.x * this.frequency * this.amplitude * h * Mathf.Cos(xz * this.frequency + GetTime());
+            float dy = this.steepness * d.y * this.frequency * this.amplitude * h * Mathf.Cos(xz * this.frequency + GetTime());
 
             return new Vector2(dx, dy);
         }
@@ -124,13 +130,28 @@ public class Water : MonoBehaviour {
             float xz = GetWaveCoord(v, d);
 
             Vector3 g = new Vector3(0.0f, 0.0f, 0.0f);
-            g.x = (this.steepness - 1) * this.amplitude * d.x * Mathf.Cos(this.frequency * xz + Time.time * this.phase);
-            g.z = (this.steepness - 1) * this.amplitude * d.y * Mathf.Cos(this.frequency * xz + Time.time * this.phase);
-            g.y = this.amplitude * Mathf.Sin(this.frequency * xz + Time.time * this.phase);
-
-            if (this.waveType == WaveType.Circular) g.y = -g.y;
+            g.x = (this.steepness - 1) * this.amplitude * d.x * Mathf.Cos(this.frequency * xz + GetTime());
+            g.z = (this.steepness - 1) * this.amplitude * d.y * Mathf.Cos(this.frequency * xz + GetTime());
+            g.y = this.amplitude * Mathf.Sin(this.frequency * xz + GetTime());
             
             return g;
+        }
+
+        public Vector3 GerstnerNormal(Vector3 v) {
+            Vector2 d = GetDirection(v);
+            float xz = GetWaveCoord(v, d);
+
+            Vector3 n = new Vector3(0.0f, 0.0f, 0.0f);
+            
+            float wa = this.frequency * this.amplitude;
+            float s = Mathf.Sin(this.frequency * xz + GetTime());
+            float c = Mathf.Cos(this.frequency * xz + GetTime());
+
+            n.x = d.x * wa * c;
+            n.z = d.y * wa * c;
+            n.y = (this.steepness - 1) * wa * s;
+
+            return n;
         }
     }
 
@@ -222,18 +243,25 @@ public class Water : MonoBehaviour {
                 }
 
                 Vector3 normal = new Vector3(0.0f, 1.0f, 0.0f);
-                if (waveFunction == WaveFunction.Sine)
+                if (waveFunction == WaveFunction.Sine) {
                     normal = w.SineNormal(v);
-                else if (waveFunction == WaveFunction.SteepSine)
+                    normals[i] = new Vector3(-normal.x, 1.0f, -normal.y);
+                    normals[i].Normalize();
+                }
+                else if (waveFunction == WaveFunction.SteepSine) {
                     normal = w.SteepSineNormal(v);
-                
-                normals[i] = new Vector3(-normal.x, 1.0f, -normal.y);
-                normals[i].Normalize();
+                    normals[i] = new Vector3(-normal.x, 1.0f, -normal.y);
+                    normals[i].Normalize();
+                } else if (waveFunction == WaveFunction.Gerstner) {
+                    normal = w.GerstnerNormal(displacedVertices[i]);
+
+                    normals[i] = new Vector3(-normal.x, 1.0f - normal.y, -normal.z);
+                    normals[i].Normalize();
+                }
             }
 
             mesh.vertices = displacedVertices;
             mesh.normals = normals;
-            mesh.RecalculateNormals();
         }
     }
 
@@ -255,9 +283,9 @@ public class Water : MonoBehaviour {
 
         for (int i = 0; i < vertices.Length; ++i) {
             Gizmos.color = Color.black;
-            Gizmos.DrawSphere(transform.TransformPoint(vertices[i]), 0.1f);
+            Gizmos.DrawSphere(transform.TransformPoint(displacedVertices[i]), 0.1f);
             Gizmos.color = Color.yellow;
-            Gizmos.DrawRay(transform.TransformPoint(vertices[i]), normals[i]);
+            Gizmos.DrawRay(transform.TransformPoint(displacedVertices[i]), normals[i]);
         }
     }
 }
