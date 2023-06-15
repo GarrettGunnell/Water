@@ -22,10 +22,9 @@ public class Water : MonoBehaviour {
     };
 
     public WaveFunction waveFunction;
+    public WaveType waveType;
 
     [Header("Wave One")]
-    public WaveType waveType1;
-
     [Range(0.0f, 360.0f)]
     public float direction1 = 0.0f;
 
@@ -44,8 +43,6 @@ public class Water : MonoBehaviour {
     public float steepness1 = 1.0f;
 
     [Header("Wave Two")]
-    public WaveType waveType2;
-
     [Range(0.0f, 360.0f)]
     public float direction2 = 0.0f;
 
@@ -64,8 +61,6 @@ public class Water : MonoBehaviour {
     public float steepness2 = 1.0f;
 
     [Header("Wave Three")]
-    public WaveType waveType3;
-
     [Range(0.0f, 360.0f)]
     public float direction3 = 0.0f;
 
@@ -84,8 +79,6 @@ public class Water : MonoBehaviour {
     public float steepness3 = 1.0f;
 
     [Header("Wave Four")]
-    public WaveType waveType4;
-
     [Range(0.0f, 360.0f)]
     public float direction4 = 0.0f;
 
@@ -112,11 +105,16 @@ public class Water : MonoBehaviour {
         public WaveType waveType;
         public Vector2 origin;
 
-        public Wave(float wavelength, float amplitude, float speed, float direction, float steepness, WaveType waveType, Vector2 origin) {
+        public Wave(float wavelength, float amplitude, float speed, float direction, float steepness, WaveType waveType, Vector2 origin, WaveFunction waveFunction) {
             this.frequency = 2.0f / wavelength;
             this.amplitude = amplitude;
             this.phase = speed * 2.0f / wavelength;
-            this.steepness = steepness;
+
+            if (waveFunction == WaveFunction.Gerstner)
+                this.steepness = (steepness - 1) / this.frequency * this.amplitude * 4.0f;
+            else
+                this.steepness = steepness;
+            
             this.waveType = waveType;
             this.origin = origin;
 
@@ -181,7 +179,7 @@ public class Water : MonoBehaviour {
             Vector2 d = GetDirection(v);
             float xz = GetWaveCoord(v, d);
 
-            float h = 2 * this.amplitude * Mathf.Pow((Mathf.Sin(xz * this.frequency + GetTime()) + 1) / 2.0f, this.steepness - 1);
+            float h = Mathf.Pow((Mathf.Sin(xz * this.frequency + GetTime()) + 1) / 2.0f, this.steepness - 1);
             float dx = this.steepness * d.x * this.frequency * this.amplitude * h * Mathf.Cos(xz * this.frequency + GetTime());
             float dy = this.steepness * d.y * this.frequency * this.amplitude * h * Mathf.Cos(xz * this.frequency + GetTime());
 
@@ -193,8 +191,8 @@ public class Water : MonoBehaviour {
             float xz = GetWaveCoord(v, d);
 
             Vector3 g = new Vector3(0.0f, 0.0f, 0.0f);
-            g.x = (this.steepness - 1) * this.amplitude * d.x * Mathf.Cos(this.frequency * xz + GetTime());
-            g.z = (this.steepness - 1) * this.amplitude * d.y * Mathf.Cos(this.frequency * xz + GetTime());
+            g.x = this.steepness * this.amplitude * d.x * Mathf.Cos(this.frequency * xz + GetTime());
+            g.z = this.steepness * this.amplitude * d.y * Mathf.Cos(this.frequency * xz + GetTime());
             g.y = this.amplitude * Mathf.Sin(this.frequency * xz + GetTime());
             
             return g;
@@ -212,7 +210,7 @@ public class Water : MonoBehaviour {
 
             n.x = d.x * wa * c;
             n.z = d.y * wa * c;
-            n.y = (this.steepness - 1) * wa * s;
+            n.y = this.steepness * wa * s;
 
             return n;
         }
@@ -287,10 +285,10 @@ public class Water : MonoBehaviour {
     }
 
     void Update() {
-        waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType1, origin1);
-        waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType2, origin2);
-        waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType3, origin3);
-        waves[3] = new Wave(wavelength4, amplitude4, speed4, direction4, steepness4, waveType4, origin4);
+        waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
+        waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);
+        waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction);
+        waves[3] = new Wave(wavelength4, amplitude4, speed4, direction4, steepness4, waveType, origin4, waveFunction);
 
         if (vertices != null) {
             for (int i = 0; i < vertices.Length; ++i) {
