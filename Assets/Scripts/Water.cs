@@ -15,30 +15,93 @@ public class Water : MonoBehaviour {
         SteepSine,
         Gerstner
     }; 
-    [Header("Wave One")]
-    public WaveFunction waveFunction;
-    
+
     public enum WaveType {
         Directional = 0,
         Circular,
-    }; public WaveType waveType;
+    };
+
+    public WaveFunction waveFunction;
+
+    [Header("Wave One")]
+    public WaveType waveType1;
 
     [Range(0.0f, 360.0f)]
-    public float direction = 0.0f;
+    public float direction1 = 0.0f;
 
-    public Vector2 origin = new Vector2(0.0f, 0.0f);
-
-    [Range(0.01f, 5.0f)]
-    public float speed = 1.0f;
+    public Vector2 origin1 = new Vector2(0.0f, 0.0f);
 
     [Range(0.01f, 5.0f)]
-    public float amplitude = 1.0f;
+    public float speed1 = 1.0f;
+
+    [Range(0.01f, 5.0f)]
+    public float amplitude1 = 1.0f;
 
     [Range(0.01f, 3.0f)]
-    public float wavelength = 1.0f;
+    public float wavelength1 = 1.0f;
 
     [Range(1.0f, 5.0f)]
-    public float steepness = 1.0f;
+    public float steepness1 = 1.0f;
+
+    [Header("Wave Two")]
+    public WaveType waveType2;
+
+    [Range(0.0f, 360.0f)]
+    public float direction2 = 0.0f;
+
+    public Vector2 origin2 = new Vector2(0.0f, 0.0f);
+
+    [Range(0.01f, 5.0f)]
+    public float speed2 = 1.0f;
+
+    [Range(0.01f, 5.0f)]
+    public float amplitude2 = 1.0f;
+
+    [Range(0.01f, 3.0f)]
+    public float wavelength2 = 1.0f;
+
+    [Range(1.0f, 5.0f)]
+    public float steepness2 = 1.0f;
+
+    [Header("Wave Three")]
+    public WaveType waveType3;
+
+    [Range(0.0f, 360.0f)]
+    public float direction3 = 0.0f;
+
+    public Vector2 origin3 = new Vector2(0.0f, 0.0f);
+
+    [Range(0.01f, 5.0f)]
+    public float speed3 = 1.0f;
+
+    [Range(0.01f, 5.0f)]
+    public float amplitude3 = 1.0f;
+
+    [Range(0.01f, 3.0f)]
+    public float wavelength3 = 1.0f;
+
+    [Range(1.0f, 5.0f)]
+    public float steepness3 = 1.0f;
+
+    [Header("Wave Four")]
+    public WaveType waveType4;
+
+    [Range(0.0f, 360.0f)]
+    public float direction4 = 0.0f;
+
+    public Vector2 origin4 = new Vector2(0.0f, 0.0f);
+
+    [Range(0.01f, 5.0f)]
+    public float speed4 = 1.0f;
+
+    [Range(0.01f, 5.0f)]
+    public float amplitude4 = 1.0f;
+
+    [Range(0.01f, 3.0f)]
+    public float wavelength4 = 1.0f;
+
+    [Range(1.0f, 5.0f)]
+    public float steepness4 = 1.0f;
 
     private struct Wave {
         public float frequency;
@@ -97,14 +160,14 @@ public class Water : MonoBehaviour {
             return Mathf.Sin(this.frequency * xz + GetTime()) * this.amplitude;
         }
 
-        public Vector2 SineNormal(Vector3 v) {
+        public Vector3 SineNormal(Vector3 v) {
             Vector2 d = GetDirection(v);
             float xz = GetWaveCoord(v, d);
 
             float dx = this.frequency * this.amplitude * d.x * Mathf.Cos(xz * this.frequency + GetTime());
             float dy = this.frequency * this.amplitude * d.y * Mathf.Cos(xz * this.frequency + GetTime());
 
-            return new Vector2(dx, dy);
+            return new Vector3(dx, dy, 0.0f);
         }
 
         public float SteepSine(Vector3 v) {
@@ -114,7 +177,7 @@ public class Water : MonoBehaviour {
             return 2 * this.amplitude * Mathf.Pow((Mathf.Sin(xz * this.frequency + GetTime()) + 1) / 2.0f, this.steepness);
         }
 
-        public Vector2 SteepSineNormal(Vector3 v) {
+        public Vector3 SteepSineNormal(Vector3 v) {
             Vector2 d = GetDirection(v);
             float xz = GetWaveCoord(v, d);
 
@@ -122,7 +185,7 @@ public class Water : MonoBehaviour {
             float dx = this.steepness * d.x * this.frequency * this.amplitude * h * Mathf.Cos(xz * this.frequency + GetTime());
             float dy = this.steepness * d.y * this.frequency * this.amplitude * h * Mathf.Cos(xz * this.frequency + GetTime());
 
-            return new Vector2(dx, dy);
+            return new Vector3(dx, dy, 0.0f);
         }
 
         public Vector3 Gerstner(Vector3 v) {
@@ -155,7 +218,7 @@ public class Water : MonoBehaviour {
         }
     }
 
-    private Wave wave;
+    private Wave[] waves = new Wave[4];
 
     private Material waterMaterial;
     private Mesh mesh;
@@ -224,40 +287,56 @@ public class Water : MonoBehaviour {
     }
 
     void Update() {
-        Wave w = new Wave(wavelength, amplitude, speed, direction, steepness, waveType, origin);
+        waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType1, origin1);
+        waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType2, origin2);
+        waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType3, origin3);
+        waves[3] = new Wave(wavelength4, amplitude4, speed4, direction4, steepness4, waveType4, origin4);
 
         if (vertices != null) {
             for (int i = 0; i < vertices.Length; ++i) {
                 Vector3 v = transform.TransformPoint(vertices[i]);
 
-                if (waveFunction == WaveFunction.Sine)
-                    displacedVertices[i].y = w.Sine(v);
-                else if (waveFunction == WaveFunction.SteepSine)
-                    displacedVertices[i].y = w.SteepSine(v);
-                else if (waveFunction == WaveFunction.Gerstner) {
-                    Vector3 g = w.Gerstner(v);
-                    //Debug.Log("Vertex: " + v.ToString() + "\nWave: " + g.ToString());
-                    displacedVertices[i].x = v.x + g.x;
-                    displacedVertices[i].z = v.z + g.z;
-                    displacedVertices[i].y = g.y;
+                Vector3 newPos = new Vector3(0.0f, 0.0f, 0.0f);
+                for (int wi = 0; wi < 4; ++wi) {
+                    Wave w = waves[wi];
+
+                    if (waveFunction == WaveFunction.Sine)
+                        newPos.y += w.Sine(v);
+                    else if (waveFunction == WaveFunction.SteepSine)
+                        newPos.y += w.SteepSine(v);
+                    else if (waveFunction == WaveFunction.Gerstner) {
+                        Vector3 g = w.Gerstner(v);
+
+                        newPos.x += g.x;
+                        newPos.z += g.z;
+                        newPos.y += g.y;
+                    }
                 }
 
-                Vector3 normal = new Vector3(0.0f, 1.0f, 0.0f);
-                if (waveFunction == WaveFunction.Sine) {
-                    normal = w.SineNormal(v);
-                    normals[i] = new Vector3(-normal.x, 1.0f, -normal.y);
-                    normals[i].Normalize();
-                }
-                else if (waveFunction == WaveFunction.SteepSine) {
-                    normal = w.SteepSineNormal(v);
-                    normals[i] = new Vector3(-normal.x, 1.0f, -normal.y);
-                    normals[i].Normalize();
-                } else if (waveFunction == WaveFunction.Gerstner) {
-                    normal = w.GerstnerNormal(displacedVertices[i]);
+                displacedVertices[i] = new Vector3(v.x + newPos.x, newPos.y, v.z + newPos.z);
 
+                // Gerstner waves require the new position to be calculated before normal calculation
+                // otherwise could do this in same loop above
+                Vector3 normal = new Vector3(0.0f, 0.0f, 0.0f);
+                for (int wi = 0; wi < 4; ++wi) {
+                    Wave w = waves[wi];
+
+                    if (waveFunction == WaveFunction.Sine) {
+                        normal = normal + w.SineNormal(v);
+                    } else if (waveFunction == WaveFunction.SteepSine) {
+                        normal = normal + w.SteepSineNormal(v);
+                    } else if (waveFunction == WaveFunction.Gerstner) {
+                        normal = normal + w.GerstnerNormal(displacedVertices[i]);
+                    }
+                }
+
+                if (waveFunction == WaveFunction.Gerstner) {
                     normals[i] = new Vector3(-normal.x, 1.0f - normal.y, -normal.z);
-                    normals[i].Normalize();
+                } else {
+                    normals[i] = new Vector3(-normal.x, 1.0f, -normal.y);
                 }
+
+                normals[i].Normalize();
             }
 
             mesh.vertices = displacedVertices;

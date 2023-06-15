@@ -39,8 +39,9 @@ Shader "Custom/Water" {
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
                 float3 halfwayDir = normalize(lightDir + viewDir);
 
-                float3 ambient = float3(0.0f, 0.0f, 0.0f);
-                float3 diffuse = _LightColor0.rgb * DotClamped(lightDir, normalize(i.normal));
+                float3 ambient = float3(0.0f, 0.0f, 0.1f);
+                float3 diffuse = _LightColor0.rgb * DotClamped(lightDir, normalize(i.normal)) * 0.5f + 0.5f;
+				diffuse *= diffuse;
                 float specular = _LightColor0.rgb * pow(DotClamped(i.normal, halfwayDir), 50.0f);
 
 
