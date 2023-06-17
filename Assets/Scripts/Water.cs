@@ -24,79 +24,35 @@ public class Water : MonoBehaviour {
     public WaveFunction waveFunction;
     public WaveType waveType;
 
-    [Header("Wave One")]
-    [Range(0.0f, 360.0f)]
     public float direction1 = 0.0f;
-
     public Vector2 origin1 = new Vector2(0.0f, 0.0f);
-
-    [Range(0.01f, 5.0f)]
     public float speed1 = 1.0f;
-
-    [Range(0.01f, 5.0f)]
     public float amplitude1 = 1.0f;
-
-    [Range(0.01f, 3.0f)]
     public float wavelength1 = 1.0f;
-
-    [Range(1.0f, 5.0f)]
     public float steepness1 = 1.0f;
 
-    [Header("Wave Two")]
-    [Range(0.0f, 360.0f)]
     public float direction2 = 0.0f;
-
     public Vector2 origin2 = new Vector2(0.0f, 0.0f);
-
-    [Range(0.01f, 5.0f)]
     public float speed2 = 1.0f;
-
-    [Range(0.01f, 5.0f)]
     public float amplitude2 = 1.0f;
-
-    [Range(0.01f, 3.0f)]
     public float wavelength2 = 1.0f;
-
-    [Range(1.0f, 5.0f)]
     public float steepness2 = 1.0f;
 
-    [Header("Wave Three")]
-    [Range(0.0f, 360.0f)]
     public float direction3 = 0.0f;
-
     public Vector2 origin3 = new Vector2(0.0f, 0.0f);
-
-    [Range(0.01f, 5.0f)]
     public float speed3 = 1.0f;
-
-    [Range(0.01f, 5.0f)]
     public float amplitude3 = 1.0f;
-
-    [Range(0.01f, 3.0f)]
     public float wavelength3 = 1.0f;
-
-    [Range(1.0f, 5.0f)]
     public float steepness3 = 1.0f;
 
-    [Header("Wave Four")]
-    [Range(0.0f, 360.0f)]
     public float direction4 = 0.0f;
-
     public Vector2 origin4 = new Vector2(0.0f, 0.0f);
-
-    [Range(0.01f, 5.0f)]
     public float speed4 = 1.0f;
-
-    [Range(0.01f, 5.0f)]
     public float amplitude4 = 1.0f;
-
-    [Range(0.01f, 3.0f)]
     public float wavelength4 = 1.0f;
-
-    [Range(1.0f, 5.0f)]
     public float steepness4 = 1.0f;
 
-    private struct Wave {
+    public struct Wave {
         public float frequency;
         public float amplitude;
         public float phase;
@@ -224,6 +180,8 @@ public class Water : MonoBehaviour {
     private Vector3[] displacedVertices;
     private Vector3[] normals;
 
+    private bool usingVertexDisplacement = false;
+
     private void CreateWaterPlane() {
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
         mesh.name = "Water";
@@ -277,6 +235,23 @@ public class Water : MonoBehaviour {
         MeshRenderer renderer = GetComponent<MeshRenderer>();
 
         renderer.material = waterMaterial;
+    }
+
+    public void ToggleVertexDisplacementMethod() {
+        if (!Application.isPlaying) {
+            Debug.Log("Not in play mode!");
+            return;
+        }
+        
+        usingVertexDisplacement = !usingVertexDisplacement;
+
+        if (usingVertexDisplacement) {
+            waterMaterial.EnableKeyword("USE_VERTEX_DISPLACEMENT");
+            Debug.Log("Toggled GPU Vertex Displacement");
+        } else {
+            waterMaterial.DisableKeyword("USE_VERTEX_DISPLACEMENT");
+            Debug.Log("Toggled CPU Vertex Displacement");
+        }
     }
 
     void OnEnable() {

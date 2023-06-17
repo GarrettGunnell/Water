@@ -11,6 +11,8 @@ Shader "Custom/Water" {
 			#pragma vertex vp
 			#pragma fragment fp
 
+			#pragma shader_feature USE_VERTEX_DISPLACEMENT
+
 			#include "UnityPBSLighting.cginc"
             #include "AutoLight.cginc"
 
@@ -27,9 +29,16 @@ Shader "Custom/Water" {
 
 			v2f vp(VertexData v) {
 				v2f i;
-				i.pos = UnityObjectToClipPos(v.vertex);
-				i.worldPos = mul(unity_ObjectToWorld, v.vertex);
-				i.normal = normalize(UnityObjectToWorldNormal(v.normal));
+
+				#ifdef USE_VERTEX_DISPLACEMENT
+					i.worldPos = mul(unity_ObjectToWorld, v.vertex);
+					i.normal = normalize(UnityObjectToWorldNormal(v.normal));
+					i.pos = UnityObjectToClipPos(v.vertex + float3(0.0f, 5.0f, 0.0f));
+				#else
+					i.worldPos = mul(unity_ObjectToWorld, v.vertex);
+					i.normal = normalize(UnityObjectToWorldNormal(v.normal));
+					i.pos = UnityObjectToClipPos(v.vertex);
+				#endif
 
 				return i;
 			}
