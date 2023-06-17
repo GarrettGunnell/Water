@@ -179,6 +179,7 @@ public class Water : MonoBehaviour {
     private Vector3[] vertices;
     private Vector3[] displacedVertices;
     private Vector3[] normals;
+    private Vector3[] displacedNormals;
 
     private bool usingVertexDisplacement = false;
 
@@ -225,6 +226,8 @@ public class Water : MonoBehaviour {
 
         displacedVertices = new Vector3[vertices.Length];
         Array.Copy(vertices, 0, displacedVertices, 0, vertices.Length);
+        displacedNormals = new Vector3[normals.Length];
+        Array.Copy(normals, 0, displacedNormals, 0, normals.Length);
     }
 
     void CreateMaterial() {
@@ -242,14 +245,18 @@ public class Water : MonoBehaviour {
             Debug.Log("Not in play mode!");
             return;
         }
-        
+
         usingVertexDisplacement = !usingVertexDisplacement;
 
         if (usingVertexDisplacement) {
             waterMaterial.EnableKeyword("USE_VERTEX_DISPLACEMENT");
+            mesh.vertices = vertices;
+            mesh.normals = normals;
             Debug.Log("Toggled GPU Vertex Displacement");
         } else {
             waterMaterial.DisableKeyword("USE_VERTEX_DISPLACEMENT");
+            mesh.vertices = displacedVertices;
+            mesh.normals = displacedNormals;
             Debug.Log("Toggled CPU Vertex Displacement");
         }
     }
@@ -260,60 +267,67 @@ public class Water : MonoBehaviour {
     }
 
     void Update() {
-        waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
-        waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);
-        waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction);
-        waves[3] = new Wave(wavelength4, amplitude4, speed4, direction4, steepness4, waveType, origin4, waveFunction);
+        if (usingVertexDisplacement) {
+            waterMaterial.SetVector("_Direction", new Vector2(Mathf.Cos(Mathf.Deg2Rad * direction1), Mathf.Sin(Mathf.Deg2Rad * direction1)));
+            waterMaterial.SetFloat("_Frequency", 2.0f / wavelength1);
+            waterMaterial.SetFloat("_Amplitude", amplitude1);
+            waterMaterial.SetFloat("_Phase", speed1 * 2.0f / wavelength1);
+        } else {
+            waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
+            waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);
+            waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction);
+            waves[3] = new Wave(wavelength4, amplitude4, speed4, direction4, steepness4, waveType, origin4, waveFunction);
 
-        if (vertices != null) {
-            for (int i = 0; i < vertices.Length; ++i) {
-                Vector3 v = transform.TransformPoint(vertices[i]);
+            if (vertices != null) {
+                for (int i = 0; i < vertices.Length; ++i) {
+                    Vector3 v = transform.TransformPoint(vertices[i]);
 
-                Vector3 newPos = new Vector3(0.0f, 0.0f, 0.0f);
-                for (int wi = 0; wi < 4; ++wi) {
-                    Wave w = waves[wi];
+                    Vector3 newPos = new Vector3(0.0f, 0.0f, 0.0f);
+                    for (int wi = 0; wi < 4; ++wi) {
+                        Wave w = waves[wi];
 
-                    if (waveFunction == WaveFunction.Sine)
-                        newPos.y += w.Sine(v);
-                    else if (waveFunction == WaveFunction.SteepSine)
-                        newPos.y += w.SteepSine(v);
-                    else if (waveFunction == WaveFunction.Gerstner) {
-                        Vector3 g = w.Gerstner(v);
+                        if (waveFunction == WaveFunction.Sine)
+                            newPos.y += w.Sine(v);
+                        else if (waveFunction == WaveFunction.SteepSine)
+                            newPos.y += w.SteepSine(v);
+                        else if (waveFunction == WaveFunction.Gerstner) {
+                            Vector3 g = w.Gerstner(v);
 
-                        newPos.x += g.x;
-                        newPos.z += g.z;
-                        newPos.y += g.y;
+                            newPos.x += g.x;
+                            newPos.z += g.z;
+                            newPos.y += g.y;
+                        }
                     }
-                }
 
-                displacedVertices[i] = new Vector3(v.x + newPos.x, newPos.y, v.z + newPos.z);
+                    displacedVertices[i] = new Vector3(v.x + newPos.x, newPos.y, v.z + newPos.z);
 
-                // Gerstner waves require the new position to be calculated before normal calculation
-                // otherwise could do this in same loop above
-                Vector3 normal = new Vector3(0.0f, 0.0f, 0.0f);
-                for (int wi = 0; wi < 4; ++wi) {
-                    Wave w = waves[wi];
+                    // Gerstner waves require the new position to be calculated before normal calculation
+                    // otherwise could do this in same loop above
+                    Vector3 normal = new Vector3(0.0f, 0.0f, 0.0f);
+                    for (int wi = 0; wi < 4; ++wi) {
+                        Wave w = waves[wi];
 
-                    if (waveFunction == WaveFunction.Sine) {
-                        normal = normal + w.SineNormal(v);
-                    } else if (waveFunction == WaveFunction.SteepSine) {
-                        normal = normal + w.SteepSineNormal(v);
-                    } else if (waveFunction == WaveFunction.Gerstner) {
-                        normal = normal + w.GerstnerNormal(displacedVertices[i]);
+                        if (waveFunction == WaveFunction.Sine) {
+                            normal = normal + w.SineNormal(v);
+                        } else if (waveFunction == WaveFunction.SteepSine) {
+                            normal = normal + w.SteepSineNormal(v);
+                        } else if (waveFunction == WaveFunction.Gerstner) {
+                            normal = normal + w.GerstnerNormal(displacedVertices[i]);
+                        }
                     }
+
+                    if (waveFunction == WaveFunction.Gerstner) {
+                        displacedNormals[i] = new Vector3(-normal.x, 1.0f - normal.y, -normal.z);
+                    } else {
+                        displacedNormals[i] = new Vector3(-normal.x, 1.0f, -normal.y);
+                    }
+
+                    displacedNormals[i].Normalize();
                 }
 
-                if (waveFunction == WaveFunction.Gerstner) {
-                    normals[i] = new Vector3(-normal.x, 1.0f - normal.y, -normal.z);
-                } else {
-                    normals[i] = new Vector3(-normal.x, 1.0f, -normal.y);
-                }
-
-                normals[i].Normalize();
+                mesh.vertices = displacedVertices;
+                mesh.normals = displacedNormals;
             }
-
-            mesh.vertices = displacedVertices;
-            mesh.normals = normals;
         }
     }
 
