@@ -16,9 +16,6 @@ Shader "Custom/Water" {
 			#include "UnityPBSLighting.cginc"
             #include "AutoLight.cginc"
 
-			float2 _Direction;
-			float _Frequency, _Amplitude, _Phase;
-
 			struct VertexData {
 				float4 vertex : POSITION;
 				float3 normal : NORMAL;
@@ -30,14 +27,32 @@ Shader "Custom/Water" {
 				float3 worldPos : TEXCOORD2;
 			};
 
+			struct Wave {
+				float2 direction;
+				float2 origin;
+				float frequency;
+				float amplitude;
+				float phase;
+				float steepness;
+				int waveType;
+			};
+			
+			StructuredBuffer<Wave> _Waves;
+
+			//#define sin fastSine
+
+			float fastSine(float x) {
+				return 1.0f;
+			}
+
 			float Sine(float3 v, float2 d) {
-			float xz = d.x * v.x + d.y * v.z;
-				return sin(_Frequency * xz + _Time.y * _Phase) * _Amplitude;
+				float xz = d.x * v.x + d.y * v.z;
+				return sin(xz * _Waves[0].frequency + _Time.y * _Waves[0].phase) * _Waves[0].amplitude;
 			}
 
 			float3 SineNormal(float3 v, float2 d) {
 				float xz = d.x * v.x + d.y * v.z;
-				float2 n = _Frequency * _Amplitude * d * cos(xz *_Frequency + _Time.y * _Phase);
+				float2 n = _Waves[0].frequency * _Waves[0].amplitude * d * cos(xz * _Waves[0].frequency + _Time.y * _Waves[0].phase);
 
 				return float3(n.x, n.y, 0.0f);
 			}
@@ -48,10 +63,13 @@ Shader "Custom/Water" {
 				#ifdef USE_VERTEX_DISPLACEMENT
 					i.worldPos = mul(unity_ObjectToWorld, v.vertex);
 
-					float h = Sine(i.worldPos, _Direction);
+					float h = 0.0f;
+
+					h += Sine(i.worldPos, _Waves[0].direction);
+					
 					i.pos = UnityObjectToClipPos(v.vertex + float4(0.0f, h, 0.0f, 0.0f));
 
-					float3 n = SineNormal(i.worldPos, _Direction);
+					float3 n = SineNormal(i.worldPos, _Waves[0].direction);
 					i.normal = normalize(UnityObjectToWorldNormal(float3(-n.x, 1.0f, -n.y)));
 				#else
 					i.worldPos = mul(unity_ObjectToWorld, v.vertex);

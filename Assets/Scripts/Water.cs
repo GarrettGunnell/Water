@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using static System.Runtime.InteropServices.Marshal;
 using UnityEngine;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
@@ -53,13 +54,13 @@ public class Water : MonoBehaviour {
     public float steepness4 = 1.0f;
 
     public struct Wave {
+        public Vector2 direction;
+        public Vector2 origin;
         public float frequency;
         public float amplitude;
         public float phase;
         public float steepness;
-        public Vector2 direction;
         public WaveType waveType;
-        public Vector2 origin;
 
         public Wave(float wavelength, float amplitude, float speed, float direction, float steepness, WaveType waveType, Vector2 origin, WaveFunction waveFunction) {
             this.frequency = 2.0f / wavelength;
@@ -173,6 +174,7 @@ public class Water : MonoBehaviour {
     }
 
     private Wave[] waves = new Wave[4];
+    private ComputeBuffer waveBuffer;
 
     private Material waterMaterial;
     private Mesh mesh;
@@ -182,6 +184,27 @@ public class Water : MonoBehaviour {
     private Vector3[] displacedNormals;
 
     private bool usingVertexDisplacement = false;
+
+    public void ToggleVertexDisplacementMethod() {
+        if (!Application.isPlaying) {
+            Debug.Log("Not in play mode!");
+            return;
+        }
+
+        usingVertexDisplacement = !usingVertexDisplacement;
+
+        if (usingVertexDisplacement) {
+            waterMaterial.EnableKeyword("USE_VERTEX_DISPLACEMENT");
+            mesh.vertices = vertices;
+            mesh.normals = normals;
+            Debug.Log("Toggled GPU Vertex Displacement");
+        } else {
+            waterMaterial.DisableKeyword("USE_VERTEX_DISPLACEMENT");
+            mesh.vertices = displacedVertices;
+            mesh.normals = displacedNormals;
+            Debug.Log("Toggled CPU Vertex Displacement");
+        }
+    }
 
     private void CreateWaterPlane() {
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
@@ -240,38 +263,29 @@ public class Water : MonoBehaviour {
         renderer.material = waterMaterial;
     }
 
-    public void ToggleVertexDisplacementMethod() {
-        if (!Application.isPlaying) {
-            Debug.Log("Not in play mode!");
-            return;
-        }
+    void CreateWaveBuffer() {
+        if (waveBuffer != null) return;
 
-        usingVertexDisplacement = !usingVertexDisplacement;
+        waveBuffer = new ComputeBuffer(4, SizeOf(typeof(Wave)));
 
-        if (usingVertexDisplacement) {
-            waterMaterial.EnableKeyword("USE_VERTEX_DISPLACEMENT");
-            mesh.vertices = vertices;
-            mesh.normals = normals;
-            Debug.Log("Toggled GPU Vertex Displacement");
-        } else {
-            waterMaterial.DisableKeyword("USE_VERTEX_DISPLACEMENT");
-            mesh.vertices = displacedVertices;
-            mesh.normals = displacedNormals;
-            Debug.Log("Toggled CPU Vertex Displacement");
-        }
+        waterMaterial.SetBuffer("_Waves", waveBuffer);
     }
 
     void OnEnable() {
         CreateWaterPlane();
         CreateMaterial();
+        CreateWaveBuffer();
     }
 
     void Update() {
         if (usingVertexDisplacement) {
-            waterMaterial.SetVector("_Direction", new Vector2(Mathf.Cos(Mathf.Deg2Rad * direction1), Mathf.Sin(Mathf.Deg2Rad * direction1)));
-            waterMaterial.SetFloat("_Frequency", 2.0f / wavelength1);
-            waterMaterial.SetFloat("_Amplitude", amplitude1);
-            waterMaterial.SetFloat("_Phase", speed1 * 2.0f / wavelength1);
+            waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
+            waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);
+            waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction);
+            waves[3] = new Wave(wavelength4, amplitude4, speed4, direction4, steepness4, waveType, origin4, waveFunction);
+
+            waveBuffer.SetData(waves);
+            waterMaterial.SetBuffer("_Waves", waveBuffer);
         } else {
             waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
             waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);
@@ -341,6 +355,14 @@ public class Water : MonoBehaviour {
             Destroy(mesh);
             mesh = null;
             vertices = null;
+            normals = null;
+            displacedVertices = null;
+            displacedNormals = null;
+        }
+
+        if (waveBuffer != null) {
+            waveBuffer.Release();
+            waveBuffer = null;
         }
     }
 
