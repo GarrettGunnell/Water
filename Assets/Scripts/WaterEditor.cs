@@ -24,6 +24,7 @@ public class WaterEditor : Editor {
     SerializedProperty quadRes;
     SerializedProperty waveFunction;
     SerializedProperty waveType;
+    SerializedProperty updateStatics;
     SerializedProperty direction1, direction2, direction3, direction4;
     SerializedProperty origin1, origin2, origin3, origin4;
     SerializedProperty speed1, speed2, speed3, speed4;
@@ -37,6 +38,7 @@ public class WaterEditor : Editor {
         quadRes = serializedObject.FindProperty("quadRes");
         waveFunction = serializedObject.FindProperty("waveFunction");
         waveType = serializedObject.FindProperty("waveType");
+        updateStatics = serializedObject.FindProperty("updateStatics");
         direction1 = serializedObject.FindProperty("direction1");
         direction2 = serializedObject.FindProperty("direction2");
         direction3 = serializedObject.FindProperty("direction3");
@@ -73,6 +75,7 @@ public class WaterEditor : Editor {
         EditorGUILayout.PropertyField(quadRes);
         EditorGUILayout.PropertyField(waveFunction);
         EditorGUILayout.PropertyField(waveType);
+        EditorGUILayout.PropertyField(updateStatics);
 
         if (GUILayout.Button("Use Vertex Displacement")) {
             Water water = (Water)target;

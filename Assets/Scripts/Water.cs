@@ -24,6 +24,7 @@ public class Water : MonoBehaviour {
 
     public WaveFunction waveFunction;
     public WaveType waveType;
+    public bool updateStatics = true;
 
     public float direction1 = 0.0f;
     public Vector2 origin1 = new Vector2(0.0f, 0.0f);
@@ -279,13 +280,15 @@ public class Water : MonoBehaviour {
 
     void Update() {
         if (usingVertexDisplacement) {
-            waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
-            waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);
-            waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction);
-            waves[3] = new Wave(wavelength4, amplitude4, speed4, direction4, steepness4, waveType, origin4, waveFunction);
+            if (updateStatics) {
+                waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
+                waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);
+                waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction);
+                waves[3] = new Wave(wavelength4, amplitude4, speed4, direction4, steepness4, waveType, origin4, waveFunction);
 
-            waveBuffer.SetData(waves);
-            waterMaterial.SetBuffer("_Waves", waveBuffer);
+                waveBuffer.SetData(waves);
+                waterMaterial.SetBuffer("_Waves", waveBuffer);
+            }
         } else {
             waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
             waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);

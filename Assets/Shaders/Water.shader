@@ -45,14 +45,18 @@ Shader "Custom/Water" {
 				return 1.0f;
 			}
 
-			float Sine(float3 v, float2 d) {
+			float Sine(float3 v, Wave w) {
+				float2 d = w.direction;
 				float xz = d.x * v.x + d.y * v.z;
-				return sin(xz * _Waves[0].frequency + _Time.y * _Waves[0].phase) * _Waves[0].amplitude;
+
+				return sin(xz * w.frequency + _Time.y * w.phase) * w.amplitude;
 			}
 
-			float3 SineNormal(float3 v, float2 d) {
+			float3 SineNormal(float3 v, Wave w) {
+				float2 d = w.direction;
 				float xz = d.x * v.x + d.y * v.z;
-				float2 n = _Waves[0].frequency * _Waves[0].amplitude * d * cos(xz * _Waves[0].frequency + _Time.y * _Waves[0].phase);
+
+				float2 n = w.frequency * w.amplitude * d * cos(xz * w.frequency + _Time.y * w.phase);
 
 				return float3(n.x, n.y, 0.0f);
 			}
@@ -64,12 +68,14 @@ Shader "Custom/Water" {
 					i.worldPos = mul(unity_ObjectToWorld, v.vertex);
 
 					float h = 0.0f;
+					float3 n = 0.0f;
 
-					h += Sine(i.worldPos, _Waves[0].direction);
+					for (int wi = 0; wi < 4; ++wi) {
+						h += Sine(i.worldPos, _Waves[wi]);
+						n += SineNormal(i.worldPos, _Waves[wi]);
+					}
 					
 					i.pos = UnityObjectToClipPos(v.vertex + float4(0.0f, h, 0.0f, 0.0f));
-
-					float3 n = SineNormal(i.worldPos, _Waves[0].direction);
 					i.normal = normalize(UnityObjectToWorldNormal(float3(-n.x, 1.0f, -n.y)));
 				#else
 					i.worldPos = mul(unity_ObjectToWorld, v.vertex);
