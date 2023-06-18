@@ -184,7 +184,41 @@ public class Water : MonoBehaviour {
     private Vector3[] normals;
     private Vector3[] displacedNormals;
 
-    private bool usingVertexDisplacement = false;
+    public bool usingVertexDisplacement = true;
+
+    public void CycleWaveFunction() {
+        if (!Application.isPlaying) {
+            Debug.Log("Not in play mode!");
+            return;
+        }
+
+        switch(waveFunction) {
+            case WaveFunction.Sine:
+                waterMaterial.DisableKeyword("SINE_WAVE");
+            break;
+            case WaveFunction.SteepSine:
+                waterMaterial.DisableKeyword("STEEP_SINE_WAVE");
+            break;
+            case WaveFunction.Gerstner:
+                waterMaterial.DisableKeyword("GERSTNER_WAVE");
+            break;
+        }
+
+        waveFunction += 1;
+        if ((int)waveFunction > 2) waveFunction = 0;
+
+        switch(waveFunction) {
+            case WaveFunction.Sine:
+                waterMaterial.EnableKeyword("SINE_WAVE");
+            break;
+            case WaveFunction.SteepSine:
+                waterMaterial.EnableKeyword("STEEP_SINE_WAVE");
+            break;
+            case WaveFunction.Gerstner:
+                waterMaterial.EnableKeyword("GERSTNER_WAVE");
+            break;
+        }
+    }
 
     public void ToggleVertexDisplacementMethod() {
         if (!Application.isPlaying) {
@@ -259,6 +293,31 @@ public class Water : MonoBehaviour {
         if (waterMaterial != null) return;
 
         waterMaterial = new Material(waterShader);
+        
+        waterMaterial.DisableKeyword("USE_VERTEX_DISPLACEMENT");
+        waterMaterial.DisableKeyword("SINE_WAVE");
+        waterMaterial.DisableKeyword("STEEP_SINE_WAVE");
+        waterMaterial.DisableKeyword("GERSTNER_WAVE");
+
+        switch(waveFunction) {
+            case WaveFunction.Sine:
+                waterMaterial.EnableKeyword("SINE_WAVE");
+            break;
+            case WaveFunction.SteepSine:
+                waterMaterial.EnableKeyword("STEEP_SINE_WAVE");
+            break;
+            case WaveFunction.Gerstner:
+                waterMaterial.EnableKeyword("GERSTNER_WAVE");
+            break;
+        }
+
+        if (usingVertexDisplacement) {
+            waterMaterial.EnableKeyword("USE_VERTEX_DISPLACEMENT");
+            waterMaterial.SetBuffer("_Waves", waveBuffer);
+        } else {
+            waterMaterial.DisableKeyword("USE_VERTEX_DISPLACEMENT");
+        }
+
         MeshRenderer renderer = GetComponent<MeshRenderer>();
 
         renderer.material = waterMaterial;

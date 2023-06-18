@@ -17,12 +17,15 @@ public class WaterEditor : Editor {
 
     private float steepnessMin = 0.0f;
     private float steepnessMax = 10.0f;
+
+    private bool usingVertexDisplacement = false;
+
+    private Water.WaveFunction waveFunction = Water.WaveFunction.Sine;
     
 
     SerializedProperty waterShader;
     SerializedProperty planeLength;
     SerializedProperty quadRes;
-    SerializedProperty waveFunction;
     SerializedProperty waveType;
     SerializedProperty updateStatics;
     SerializedProperty direction1, direction2, direction3, direction4;
@@ -36,7 +39,6 @@ public class WaterEditor : Editor {
         waterShader = serializedObject.FindProperty("waterShader");
         planeLength = serializedObject.FindProperty("planeLength");
         quadRes = serializedObject.FindProperty("quadRes");
-        waveFunction = serializedObject.FindProperty("waveFunction");
         waveType = serializedObject.FindProperty("waveType");
         updateStatics = serializedObject.FindProperty("updateStatics");
         direction1 = serializedObject.FindProperty("direction1");
@@ -73,13 +75,24 @@ public class WaterEditor : Editor {
         EditorGUILayout.PropertyField(waterShader);
         EditorGUILayout.PropertyField(planeLength);
         EditorGUILayout.PropertyField(quadRes);
-        EditorGUILayout.PropertyField(waveFunction);
-        EditorGUILayout.PropertyField(waveType);
-        EditorGUILayout.PropertyField(updateStatics);
+        EditorGUILayout.Space();
 
-        if (GUILayout.Button("Use Vertex Displacement")) {
+        waveFunction = ((Water)target).waveFunction;
+        if (GUILayout.Button("Function: " + waveFunction.ToString())) {
+            Water water = (Water)target;
+            water.CycleWaveFunction();
+        }
+        EditorGUILayout.Space();
+        EditorGUILayout.PropertyField(waveType);
+        EditorGUILayout.Space();
+
+        usingVertexDisplacement = ((Water)target).usingVertexDisplacement;
+        if (GUILayout.Button("Using GPU Vertex Displacement: " + usingVertexDisplacement.ToString())) {
             Water water = (Water)target;
             water.ToggleVertexDisplacementMethod();
+        }
+        if (usingVertexDisplacement) {
+            EditorGUILayout.PropertyField(updateStatics);
         }
         EditorGUILayout.Space();
 
