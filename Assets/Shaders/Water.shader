@@ -16,6 +16,7 @@ Shader "Custom/Water" {
 			#pragma shader_feature STEEP_SINE_WAVE
 			#pragma shader_feature GERSTNER_WAVE
 			#pragma shader_feature NORMALS_IN_PIXEL_SHADER
+			#pragma shader_feature CIRCULAR_WAVES
 
 			#include "UnityPBSLighting.cginc"
             #include "AutoLight.cginc"
@@ -49,54 +50,87 @@ Shader "Custom/Water" {
 				return 1.0f;
 			}
 
-			float Sine(float3 v, Wave w) {
-				float2 d = w.direction;
-				float xz = d.x * v.x + d.y * v.z;
+			float2 GetDirection(float3 v, Wave w) {
+				#ifdef CIRCULAR_WAVES
+                float2 p = float2(v.x, v.z);
 
-				return w.amplitude * sin(xz * w.frequency + _Time.y * w.phase);
+                return normalize(p - w.origin);
+				#else
+				return w.direction;
+				#endif
+			}
+
+			float GetWaveCoord(float3 v, float2 d, Wave w) {
+				#ifdef CIRCULAR_WAVES
+					float2 p = float2(v.x, v.z);
+					return length(p - w.origin);
+				#endif
+
+				return v.x * d.x + v.z * d.y;
+			}
+
+			float GetTime(Wave w) {
+				#ifdef CIRCULAR_WAVES
+					return -_Time.y * w.phase;
+				#else
+				return _Time.y * w.phase;
+				#endif
+			}
+
+			float Sine(float3 v, Wave w) {
+				float2 d = GetDirection(v, w);
+				float xz = GetWaveCoord(v, d, w);
+				float t = GetTime(w);
+
+				return w.amplitude * sin(xz * w.frequency + t);
 			}
 
 			float3 SineNormal(float3 v, Wave w) {
-				float2 d = w.direction;
-				float xz = d.x * v.x + d.y * v.z;
+				float2 d = GetDirection(v, w);
+				float xz = GetWaveCoord(v, d, w);
+				float t = GetTime(w);
 
-				float2 n = w.frequency * w.amplitude * d * cos(xz * w.frequency + _Time.y * w.phase);
+				float2 n = w.frequency * w.amplitude * d * cos(xz * w.frequency + t);
 
 				return float3(n.x, n.y, 0.0f);
 			}
 
 			float SteepSine(float3 v, Wave w) {
-				float2 d = w.direction;
-				float xz = d.x * v.x + d.y * v.z;
+				float2 d = GetDirection(v, w);
+				float xz = GetWaveCoord(v, d, w);
+				float t = GetTime(w);
 
-				return 2.0f * w.amplitude * pow((sin(xz * w.frequency + _Time.y * w.phase) + 1.0f) / 2.0f, w.steepness);
+				return 2.0f * w.amplitude * pow((sin(xz * w.frequency + t) + 1.0f) / 2.0f, w.steepness);
 			}
 
 			float3 SteepSineNormal(float3 v, Wave w) {
-				float2 d = w.direction;
-				float xz = d.x * v.x + d.y * v.z;
+				float2 d = GetDirection(v, w);
+				float xz = GetWaveCoord(v, d, w);
+				float t = GetTime(w);
 
-				float h = pow((sin(xz * w.frequency + _Time.y * w.phase) + 1) / 2.0f, max(1.0f, w.steepness - 1));
-				float2 n = d * w.steepness * w.frequency * w.amplitude * h * cos(xz * w.frequency + _Time.y * w.phase);
+				float h = pow((sin(xz * w.frequency + t) + 1) / 2.0f, max(1.0f, w.steepness - 1));
+				float2 n = d * w.steepness * w.frequency * w.amplitude * h * cos(xz * w.frequency + t);
 
 				return float3(n.x, n.y, 0.0f);
 			}
 
 			float3 Gerstner(float3 v, Wave w) {
-				float2 d = w.direction;
-				float xz = d.x * v.x + d.y * v.z;
+				float2 d = GetDirection(v, w);
+				float xz = GetWaveCoord(v, d, w);
+				float t = GetTime(w);
 
 				float3 g = float3(0.0f, 0.0f, 0.0f);
-				g.x = w.steepness * w.amplitude * d.x * cos(w.frequency * xz + _Time.y * w.phase);
-				g.z = w.steepness * w.amplitude * d.y * cos(w.frequency * xz + _Time.y * w.phase);
-				g.y = w.amplitude * sin(w.frequency * xz + _Time.y * w.phase);
+				g.x = w.steepness * w.amplitude * d.x * cos(w.frequency * xz + t);
+				g.z = w.steepness * w.amplitude * d.y * cos(w.frequency * xz + t);
+				g.y = w.amplitude * sin(w.frequency * xz + t);
 				
 				return g;
 			}
 
 			float3 GerstnerNormal(float3 v, Wave w) {
-				float2 d = w.direction;
-				float xz = d.x * v.x + d.y * v.z;
+				float2 d = GetDirection(v, w);
+				float xz = GetWaveCoord(v, d, w);
+				float t = GetTime(w);
 
 				float3 n = float3(0.0f, 0.0f, 0.0f);
 				

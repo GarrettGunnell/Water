@@ -86,7 +86,6 @@ public class Water : MonoBehaviour {
             if (waveType == WaveType.Circular) {
                 Vector2 p = new Vector2(v.x, v.z);
 
-                Vector2 heading = p - this.origin;
                 d = p - this.origin;
                 d.Normalize();
             }
@@ -186,6 +185,7 @@ public class Water : MonoBehaviour {
 
     public bool usingVertexDisplacement = true;
     public bool usingPixelShaderNormals = true;
+    public bool usingCircularWaves = false;
 
     public void CycleWaveFunction() {
         if (!Application.isPlaying) {
@@ -252,6 +252,21 @@ public class Water : MonoBehaviour {
             waterMaterial.EnableKeyword("NORMALS_IN_PIXEL_SHADER");
         } else {
             waterMaterial.DisableKeyword("NORMALS_IN_PIXEL_SHADER");
+        }
+    }
+
+    public void ToggleCircularWaves() {
+        if (!Application.isPlaying) {
+            Debug.Log("Not in play mode!");
+            return;
+        }
+
+        usingCircularWaves = !usingCircularWaves;
+
+        if (usingCircularWaves) {
+            waterMaterial.EnableKeyword("CIRCULAR_WAVES");
+        } else {
+            waterMaterial.DisableKeyword("CIRCULAR_WAVES");
         }
     }
 
@@ -336,6 +351,12 @@ public class Water : MonoBehaviour {
             waterMaterial.EnableKeyword("NORMALS_IN_PIXEL_SHADER");
         } else {
             waterMaterial.DisableKeyword("NORMALS_IN_PIXEL_SHADER");
+        }
+
+        if (usingCircularWaves) {
+            waterMaterial.EnableKeyword("CIRCULAR_WAVES");
+        } else {
+            waterMaterial.DisableKeyword("CIRCULAR_WAVES");
         }
 
         MeshRenderer renderer = GetComponent<MeshRenderer>();

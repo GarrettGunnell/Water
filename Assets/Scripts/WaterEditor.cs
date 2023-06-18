@@ -20,6 +20,7 @@ public class WaterEditor : Editor {
 
     private bool usingVertexDisplacement = false;
     private bool usingPixelShaderNormals = false;
+    private bool usingCircularWaves = false;
 
     private Water.WaveFunction waveFunction = Water.WaveFunction.Sine;
     
@@ -101,6 +102,13 @@ public class WaterEditor : Editor {
         if (GUILayout.Button("Using Pixel Shader Normals: " + usingPixelShaderNormals.ToString())) {
             Water water = (Water)target;
             water.ToggleNormalGeneration();
+        }
+        EditorGUILayout.Space();
+
+        usingCircularWaves = ((Water)target).usingCircularWaves;
+        if (GUILayout.Button("Using Circular Waves: " + usingCircularWaves.ToString())) {
+            Water water = (Water)target;
+            water.ToggleCircularWaves();
         }
         EditorGUILayout.Space();
 
