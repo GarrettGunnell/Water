@@ -15,6 +15,7 @@ Shader "Custom/Water" {
 			#pragma shader_feature SINE_WAVE
 			#pragma shader_feature STEEP_SINE_WAVE
 			#pragma shader_feature GERSTNER_WAVE
+			#pragma shader_feature NORMALS_IN_PIXEL_SHADER
 
 			#include "UnityPBSLighting.cginc"
             #include "AutoLight.cginc"
@@ -110,6 +111,38 @@ Shader "Custom/Water" {
 				return n;
 			}
 
+			float3 CalculateOffset(float3 v, Wave w) {
+				#ifdef SINE_WAVE
+					return float3(0.0f, Sine(v, w), 0.0f);
+				#endif
+
+				#ifdef STEEP_SINE_WAVE
+					return float3(0.0f, SteepSine(v, w), 0.0f);
+				#endif
+
+				#ifdef GERSTNER_WAVE
+					return Gerstner(v, w);
+				#endif
+
+				return 0.0f;
+			}
+
+			float3 CalculateNormal(float3 v, Wave w) {
+				#ifdef SINE_WAVE
+					return SineNormal(v, w);
+				#endif
+
+				#ifdef STEEP_SINE_WAVE
+					return SteepSineNormal(v, w);
+				#endif
+
+				#ifdef GERSTNER_WAVE
+					return GerstnerNormal(v, w);
+				#endif
+
+				return 0.0f;
+			}
+
 			v2f vp(VertexData v) {
 				v2f i;
 
@@ -121,18 +154,12 @@ Shader "Custom/Water" {
 
 					[unroll]
 					for (int wi = 0; wi < 4; ++wi) {
-						#ifdef SINE_WAVE
-							h.y += Sine(i.worldPos, _Waves[wi]);
-							n += SineNormal(i.worldPos, _Waves[wi]);
-						#endif
+						h += CalculateOffset(i.worldPos, _Waves[wi]);
 
-						#ifdef STEEP_SINE_WAVE
-							h.y += SteepSine(i.worldPos, _Waves[wi]);
-							n += SteepSineNormal(i.worldPos, _Waves[wi]);
-						#endif
-
-						#ifdef GERSTNER_WAVE
-							h += Gerstner(i.worldPos, _Waves[wi]);
+						#ifndef GERSTNER_WAVE
+							#ifndef NORMALS_IN_PIXEL_SHADER
+								n += CalculateNormal(i.worldPos, _Waves[wi]);
+							#endif
 						#endif
 					}
 
@@ -140,15 +167,19 @@ Shader "Custom/Water" {
 					i.worldPos = mul(unity_ObjectToWorld, newPos);
 					i.pos = UnityObjectToClipPos(newPos);
 					
+					#ifndef NORMALS_IN_PIXEL_SHADER
 					#ifdef GERSTNER_WAVE
 						[unroll]
 						for (int wi = 0; wi < 4; ++wi) {
-							n += GerstnerNormal(newPos, _Waves[wi]);
+							n += CalculateNormal(i.worldPos, _Waves[wi]);
 						}
 
                         i.normal = normalize(UnityObjectToWorldNormal(normalize(float3(-n.x, 1.0f - n.y, -n.z))));
 					#else
 						i.normal = normalize(UnityObjectToWorldNormal(normalize(float3(-n.x, 1.0f, -n.y))));
+					#endif
+					#else
+						i.normal = 0.0;
 					#endif
 				#else
 					i.worldPos = mul(unity_ObjectToWorld, v.vertex);
@@ -164,10 +195,28 @@ Shader "Custom/Water" {
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
                 float3 halfwayDir = normalize(lightDir + viewDir);
 
+				float3 normal = 0.0f;
+
+				#ifdef NORMALS_IN_PIXEL_SHADER
+				[unroll]
+				for (int wi = 0; wi < 4; ++wi) {
+					normal += CalculateNormal(i.worldPos, _Waves[wi]);
+				}
+
+				#ifdef GERSTNER_WAVE
+					normal = normalize(UnityObjectToWorldNormal(normalize(float3(-normal.x, 1.0f - normal.y, -normal.z))));
+				#else
+					normal = normalize(UnityObjectToWorldNormal(normalize(float3(-normal.x, 1.0f, -normal.y))));
+				#endif
+
+				#else
+					normal = normalize(i.normal);
+				#endif
+
                 float3 ambient = float3(0.0f, 0.0f, 0.1f);
-                float3 diffuse = _LightColor0.rgb * DotClamped(lightDir, normalize(i.normal)) * 0.5f + 0.5f;
+                float3 diffuse = _LightColor0.rgb * DotClamped(lightDir, normal) * 0.5f + 0.5f;
 				diffuse *= diffuse;
-                float specular = _LightColor0.rgb * pow(DotClamped(i.normal, halfwayDir), 50.0f);
+                float specular = _LightColor0.rgb * pow(DotClamped(normal, halfwayDir), 50.0f);
 
 
                 return float4(saturate(ambient + diffuse + specular), 1.0f);

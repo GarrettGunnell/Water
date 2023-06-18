@@ -19,6 +19,7 @@ public class WaterEditor : Editor {
     private float steepnessMax = 10.0f;
 
     private bool usingVertexDisplacement = false;
+    private bool usingPixelShaderNormals = false;
 
     private Water.WaveFunction waveFunction = Water.WaveFunction.Sine;
     
@@ -93,6 +94,13 @@ public class WaterEditor : Editor {
         }
         if (usingVertexDisplacement) {
             EditorGUILayout.PropertyField(updateStatics);
+        }
+        EditorGUILayout.Space();
+
+        usingPixelShaderNormals = ((Water)target).usingPixelShaderNormals;
+        if (GUILayout.Button("Using Pixel Shader Normals: " + usingPixelShaderNormals.ToString())) {
+            Water water = (Water)target;
+            water.ToggleNormalGeneration();
         }
         EditorGUILayout.Space();
 

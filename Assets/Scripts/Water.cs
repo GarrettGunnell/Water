@@ -185,6 +185,7 @@ public class Water : MonoBehaviour {
     private Vector3[] displacedNormals;
 
     public bool usingVertexDisplacement = true;
+    public bool usingPixelShaderNormals = true;
 
     public void CycleWaveFunction() {
         if (!Application.isPlaying) {
@@ -232,12 +233,25 @@ public class Water : MonoBehaviour {
             waterMaterial.EnableKeyword("USE_VERTEX_DISPLACEMENT");
             mesh.vertices = vertices;
             mesh.normals = normals;
-            Debug.Log("Toggled GPU Vertex Displacement");
         } else {
             waterMaterial.DisableKeyword("USE_VERTEX_DISPLACEMENT");
             mesh.vertices = displacedVertices;
             mesh.normals = displacedNormals;
-            Debug.Log("Toggled CPU Vertex Displacement");
+        }
+    }
+
+    public void ToggleNormalGeneration() {
+        if (!Application.isPlaying) {
+            Debug.Log("Not in play mode!");
+            return;
+        }
+
+        usingPixelShaderNormals = !usingPixelShaderNormals;
+
+        if (usingPixelShaderNormals) {
+            waterMaterial.EnableKeyword("NORMALS_IN_PIXEL_SHADER");
+        } else {
+            waterMaterial.DisableKeyword("NORMALS_IN_PIXEL_SHADER");
         }
     }
 
@@ -316,6 +330,12 @@ public class Water : MonoBehaviour {
             waterMaterial.SetBuffer("_Waves", waveBuffer);
         } else {
             waterMaterial.DisableKeyword("USE_VERTEX_DISPLACEMENT");
+        }
+
+        if (usingPixelShaderNormals) {
+            waterMaterial.EnableKeyword("NORMALS_IN_PIXEL_SHADER");
+        } else {
+            waterMaterial.DisableKeyword("NORMALS_IN_PIXEL_SHADER");
         }
 
         MeshRenderer renderer = GetComponent<MeshRenderer>();
