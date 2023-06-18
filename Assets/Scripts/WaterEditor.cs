@@ -10,7 +10,7 @@ public class WaterEditor : Editor {
     private float speedMax = 10.0f;
 
     private float amplitudeMin = 0.0f;
-    private float amplitudeMax = 10.0f;
+    private float amplitudeMax = 3.0f;
 
     private float wavelengthMin = 0.0f;
     private float wavelengthMax = 10.0f;
