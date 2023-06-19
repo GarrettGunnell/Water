@@ -37,6 +37,7 @@ public class WaterEditor : Editor {
     SerializedProperty wavelength1, wavelength2, wavelength3, wavelength4;
     SerializedProperty steepness1, steepness2, steepness3, steepness4;
     SerializedProperty medianWavelength, wavelengthRange;
+    SerializedProperty medianSpeed, speedRange;
     SerializedProperty medianDirection, directionalRange;
     SerializedProperty medianAmplitude;
     SerializedProperty steepness;
@@ -76,6 +77,8 @@ public class WaterEditor : Editor {
         medianDirection = serializedObject.FindProperty("medianDirection");
         directionalRange = serializedObject.FindProperty("directionalRange");
         medianAmplitude = serializedObject.FindProperty("medianAmplitude");
+        medianSpeed = serializedObject.FindProperty("medianSpeed");
+        speedRange = serializedObject.FindProperty("speedRange");
         steepness = serializedObject.FindProperty("steepness");
     }
 
@@ -139,7 +142,15 @@ public class WaterEditor : Editor {
             EditorGUILayout.Slider(medianDirection, 0.0f, 360.0f, new GUIContent("Median Direction"));
             EditorGUILayout.Slider(directionalRange, 0.0f, 360.0f, new GUIContent("Directional Range"));
             EditorGUILayout.Slider(medianAmplitude, 0.0f, 3.0f, new GUIContent("Median Amplitude"));
-            EditorGUILayout.Slider(steepness, 0.0f, 1.0f, new GUIContent("Steepness"));
+            EditorGUILayout.Slider(medianSpeed, 0.0f, 2.0f, new GUIContent("Median Speed"));
+            EditorGUILayout.Slider(speedRange, 0.0f, 1.0f, new GUIContent("Speed Range"));
+
+            if (waveFunction == Water.WaveFunction.SteepSine) {
+                EditorGUILayout.Slider(steepness, 1.0f, 10.0f, new GUIContent("Steepness"));
+            } else if (waveFunction == Water.WaveFunction.Gerstner) {
+                EditorGUILayout.Slider(steepness, 0.0f, 1.0f, new GUIContent("Steepness"));
+            }
+            
             if (GUILayout.Button("Regenerate Waves")) {
                 Water water = (Water)target;
                 water.GenerateNewWaves();

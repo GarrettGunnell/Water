@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using static System.Runtime.InteropServices.Marshal;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class Water : MonoBehaviour {
@@ -66,7 +67,7 @@ public class Water : MonoBehaviour {
         public Wave(float wavelength, float amplitude, float speed, float direction, float steepness, WaveType waveType, Vector2 origin, WaveFunction waveFunction) {
             this.frequency = 2.0f / wavelength;
             this.amplitude = amplitude;
-            this.phase = speed;
+            this.phase = speed * Mathf.Sqrt(9.8f * 2.0f * Mathf.PI / wavelength);;
 
             if (waveFunction == WaveFunction.Gerstner)
                 this.steepness = steepness / this.frequency * this.amplitude * 4.0f;
@@ -194,6 +195,8 @@ public class Water : MonoBehaviour {
     public float medianDirection = 0.0f;
     public float directionalRange = 30.0f;
     public float medianAmplitude = 1.0f;
+    public float medianSpeed = 1.0f;
+    public float speedRange = 0.1f;
     public float steepness = 0.0f;
 
     public void ToggleJesus() {
@@ -211,13 +214,15 @@ public class Water : MonoBehaviour {
         float wavelengthMax = medianWavelength * (1.0f + wavelengthRange);
         float directionMin = medianDirection - directionalRange;
         float directionMax = medianDirection + directionalRange;
+        float speedMin = Mathf.Max(0.01f, medianSpeed - speedRange);
+        float speedMax = medianSpeed + speedRange;
         float ampOverLen = medianAmplitude / medianWavelength;
 
         for (int wi = 0; wi < 4; ++wi) {
             float wavelength = UnityEngine.Random.Range(wavelengthMin, wavelengthMax);
             float direction = UnityEngine.Random.Range(directionMin, directionMax);
             float amplitude = wavelength * ampOverLen;
-            float speed = Mathf.Sqrt(9.8f * 2.0f * Mathf.PI / wavelength);
+            float speed = UnityEngine.Random.Range(speedMin, speedMax);
             Vector2 origin = new Vector2(0.0f, 0.0f);
 
             waves[wi] = new Wave(wavelength, amplitude, speed, direction, steepness, waveType, origin, waveFunction);
@@ -313,6 +318,7 @@ public class Water : MonoBehaviour {
     private void CreateWaterPlane() {
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
         mesh.name = "Water";
+        mesh.indexFormat = IndexFormat.UInt32;
 
         float halfLength = planeLength * 0.5f;
         int sideVertCount = planeLength * quadRes;
