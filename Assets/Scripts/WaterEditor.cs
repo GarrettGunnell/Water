@@ -21,10 +21,10 @@ public class WaterEditor : Editor {
     private bool usingVertexDisplacement = false;
     private bool usingPixelShaderNormals = false;
     private bool usingCircularWaves = false;
+    private bool letJesusTakeTheWheel = false;
 
     private Water.WaveFunction waveFunction = Water.WaveFunction.Sine;
     
-
     SerializedProperty waterShader;
     SerializedProperty planeLength;
     SerializedProperty quadRes;
@@ -112,46 +112,58 @@ public class WaterEditor : Editor {
         }
         EditorGUILayout.Space();
 
-        EditorGUI.indentLevel--;
-        EditorGUILayout.LabelField("Wave One", EditorStyles.boldLabel);
-        EditorGUI.indentLevel++;
-        EditorGUILayout.Slider(direction1, 0.0f, 360.0f, new GUIContent("Direction"));
-        EditorGUILayout.PropertyField(origin1, new GUIContent("Origin"));
-        EditorGUILayout.Slider(speed1, speedMin, speedMax, new GUIContent("Speed"));
-        EditorGUILayout.Slider(amplitude1, amplitudeMin, amplitudeMax, new GUIContent("Amplitude"));
-        EditorGUILayout.Slider(wavelength1, wavelengthMin, wavelengthMax, new GUIContent("Wavelength"));
-        EditorGUILayout.Slider(steepness1, steepnessMin, steepnessMax, new GUIContent("Steepness"));
+        letJesusTakeTheWheel = ((Water)target).letJesusTakeTheWheel;
+        if (GUILayout.Button("Procedurally Generate: " + letJesusTakeTheWheel.ToString())) {
+            Water water = (Water)target;
+            water.ToggleJesus();
+        }
         EditorGUILayout.Space();
-        EditorGUI.indentLevel--;
-        EditorGUILayout.LabelField("Wave Two", EditorStyles.boldLabel);
-        EditorGUI.indentLevel++;
-        EditorGUILayout.Slider(direction2, 0.0f, 360.0f, new GUIContent("Direction"));
-        EditorGUILayout.PropertyField(origin2, new GUIContent("Origin"));
-        EditorGUILayout.Slider(speed2, speedMin, speedMax, new GUIContent("Speed"));
-        EditorGUILayout.Slider(amplitude2, amplitudeMin, amplitudeMax, new GUIContent("Amplitude"));
-        EditorGUILayout.Slider(wavelength2, wavelengthMin, wavelengthMax, new GUIContent("Wavelength"));
-        EditorGUILayout.Slider(steepness2, steepnessMin, steepnessMax, new GUIContent("Steepness"));
-        EditorGUILayout.Space();
-        EditorGUI.indentLevel--;
-        EditorGUILayout.LabelField("Wave Three", EditorStyles.boldLabel);
-        EditorGUI.indentLevel++;
-        EditorGUILayout.Slider(direction3, 0.0f, 360.0f, new GUIContent("Direction"));
-        EditorGUILayout.PropertyField(origin3, new GUIContent("Origin"));
-        EditorGUILayout.Slider(speed3, speedMin, speedMax, new GUIContent("Speed"));
-        EditorGUILayout.Slider(amplitude3, amplitudeMin, amplitudeMax, new GUIContent("Amplitude"));
-        EditorGUILayout.Slider(wavelength3, wavelengthMin, wavelengthMax, new GUIContent("Wavelength"));
-        EditorGUILayout.Slider(steepness3, steepnessMin, steepnessMax, new GUIContent("Steepness"));
-        EditorGUILayout.Space();
-        EditorGUI.indentLevel--;
-        EditorGUILayout.LabelField("Wave Four", EditorStyles.boldLabel);
-        EditorGUI.indentLevel++;
-        EditorGUILayout.Slider(direction4, 0.0f, 360.0f, new GUIContent("Direction"));
-        EditorGUILayout.PropertyField(origin4, new GUIContent("Origin"));
-        EditorGUILayout.Slider(speed4, speedMin, speedMax, new GUIContent("Speed"));
-        EditorGUILayout.Slider(amplitude4, amplitudeMin, amplitudeMax, new GUIContent("Amplitude"));
-        EditorGUILayout.Slider(wavelength4, wavelengthMin, wavelengthMax, new GUIContent("Wavelength"));
-        EditorGUILayout.Slider(steepness4, steepnessMin, steepnessMax, new GUIContent("Steepness"));
-    
+
+        if (letJesusTakeTheWheel) {
+            EditorGUILayout.LabelField("Procedural Settings", EditorStyles.boldLabel);
+
+        } else {
+            EditorGUI.indentLevel--;
+            EditorGUILayout.LabelField("Wave One", EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+            EditorGUILayout.Slider(direction1, 0.0f, 360.0f, new GUIContent("Direction"));
+            EditorGUILayout.PropertyField(origin1, new GUIContent("Origin"));
+            EditorGUILayout.Slider(speed1, speedMin, speedMax, new GUIContent("Speed"));
+            EditorGUILayout.Slider(amplitude1, amplitudeMin, amplitudeMax, new GUIContent("Amplitude"));
+            EditorGUILayout.Slider(wavelength1, wavelengthMin, wavelengthMax, new GUIContent("Wavelength"));
+            EditorGUILayout.Slider(steepness1, steepnessMin, steepnessMax, new GUIContent("Steepness"));
+            EditorGUILayout.Space();
+            EditorGUI.indentLevel--;
+            EditorGUILayout.LabelField("Wave Two", EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+            EditorGUILayout.Slider(direction2, 0.0f, 360.0f, new GUIContent("Direction"));
+            EditorGUILayout.PropertyField(origin2, new GUIContent("Origin"));
+            EditorGUILayout.Slider(speed2, speedMin, speedMax, new GUIContent("Speed"));
+            EditorGUILayout.Slider(amplitude2, amplitudeMin, amplitudeMax, new GUIContent("Amplitude"));
+            EditorGUILayout.Slider(wavelength2, wavelengthMin, wavelengthMax, new GUIContent("Wavelength"));
+            EditorGUILayout.Slider(steepness2, steepnessMin, steepnessMax, new GUIContent("Steepness"));
+            EditorGUILayout.Space();
+            EditorGUI.indentLevel--;
+            EditorGUILayout.LabelField("Wave Three", EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+            EditorGUILayout.Slider(direction3, 0.0f, 360.0f, new GUIContent("Direction"));
+            EditorGUILayout.PropertyField(origin3, new GUIContent("Origin"));
+            EditorGUILayout.Slider(speed3, speedMin, speedMax, new GUIContent("Speed"));
+            EditorGUILayout.Slider(amplitude3, amplitudeMin, amplitudeMax, new GUIContent("Amplitude"));
+            EditorGUILayout.Slider(wavelength3, wavelengthMin, wavelengthMax, new GUIContent("Wavelength"));
+            EditorGUILayout.Slider(steepness3, steepnessMin, steepnessMax, new GUIContent("Steepness"));
+            EditorGUILayout.Space();
+            EditorGUI.indentLevel--;
+            EditorGUILayout.LabelField("Wave Four", EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+            EditorGUILayout.Slider(direction4, 0.0f, 360.0f, new GUIContent("Direction"));
+            EditorGUILayout.PropertyField(origin4, new GUIContent("Origin"));
+            EditorGUILayout.Slider(speed4, speedMin, speedMax, new GUIContent("Speed"));
+            EditorGUILayout.Slider(amplitude4, amplitudeMin, amplitudeMax, new GUIContent("Amplitude"));
+            EditorGUILayout.Slider(wavelength4, wavelengthMin, wavelengthMax, new GUIContent("Wavelength"));
+            EditorGUILayout.Slider(steepness4, steepnessMin, steepnessMax, new GUIContent("Steepness"));
+        }
+
         serializedObject.ApplyModifiedProperties();
     }
 }

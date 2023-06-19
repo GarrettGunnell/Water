@@ -186,6 +186,7 @@ public class Water : MonoBehaviour {
     public bool usingVertexDisplacement = true;
     public bool usingPixelShaderNormals = true;
     public bool usingCircularWaves = false;
+    public bool letJesusTakeTheWheel = true;
 
     public void CycleWaveFunction() {
         if (!Application.isPlaying) {
@@ -268,6 +269,15 @@ public class Water : MonoBehaviour {
         } else {
             waterMaterial.DisableKeyword("CIRCULAR_WAVES");
         }
+    }
+
+    public void ToggleJesus() {
+        if (!Application.isPlaying) {
+            Debug.Log("Not in play mode!");
+            return;
+        }
+
+        letJesusTakeTheWheel = !letJesusTakeTheWheel;
     }
 
     private void CreateWaterPlane() {
