@@ -426,7 +426,12 @@ public class Water : MonoBehaviour {
 
     void Update() {
         if (usingVertexDisplacement) {
-            if (updateStatics && !letJesusTakeTheWheel) {
+            if (updateStatics) {
+                if (letJesusTakeTheWheel) {
+                    waterMaterial.SetBuffer("_Waves", waveBuffer);
+                    return;
+                }
+                
                 waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
                 waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);
                 waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction);
