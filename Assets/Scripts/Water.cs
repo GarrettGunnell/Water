@@ -66,10 +66,10 @@ public class Water : MonoBehaviour {
         public Wave(float wavelength, float amplitude, float speed, float direction, float steepness, WaveType waveType, Vector2 origin, WaveFunction waveFunction) {
             this.frequency = 2.0f / wavelength;
             this.amplitude = amplitude;
-            this.phase = speed * 2.0f / wavelength;
+            this.phase = speed;
 
             if (waveFunction == WaveFunction.Gerstner)
-                this.steepness = (steepness - 1) / this.frequency * this.amplitude * 4.0f;
+                this.steepness = steepness / this.frequency * this.amplitude * 4.0f;
             else
                 this.steepness = steepness;
             
@@ -188,6 +188,45 @@ public class Water : MonoBehaviour {
     public bool usingCircularWaves = false;
     public bool letJesusTakeTheWheel = true;
 
+    //Procedural Settings
+    public float medianWavelength = 1.0f;
+    public float wavelengthRange = 1.0f;
+    public float medianDirection = 0.0f;
+    public float directionalRange = 30.0f;
+    public float medianAmplitude = 1.0f;
+    public float steepness = 0.0f;
+
+    public void ToggleJesus() {
+        if (!Application.isPlaying) {
+            Debug.Log("Not in play mode!");
+            return;
+        }
+
+        letJesusTakeTheWheel = !letJesusTakeTheWheel;
+        if (letJesusTakeTheWheel) GenerateNewWaves();
+    }
+
+    public void GenerateNewWaves() {
+        float wavelengthMin = medianWavelength / (1.0f + wavelengthRange);
+        float wavelengthMax = medianWavelength * (1.0f + wavelengthRange);
+        float directionMin = medianDirection - directionalRange;
+        float directionMax = medianDirection + directionalRange;
+        float ampOverLen = medianAmplitude / medianWavelength;
+
+        for (int wi = 0; wi < 4; ++wi) {
+            float wavelength = UnityEngine.Random.Range(wavelengthMin, wavelengthMax);
+            float direction = UnityEngine.Random.Range(directionMin, directionMax);
+            float amplitude = wavelength * ampOverLen;
+            float speed = Mathf.Sqrt(9.8f * 2.0f * Mathf.PI / wavelength);
+            Vector2 origin = new Vector2(0.0f, 0.0f);
+
+            waves[wi] = new Wave(wavelength, amplitude, speed, direction, steepness, waveType, origin, waveFunction);
+        }
+
+        waveBuffer.SetData(waves);
+        waterMaterial.SetBuffer("_Waves", waveBuffer);
+    }
+
     public void CycleWaveFunction() {
         if (!Application.isPlaying) {
             Debug.Log("Not in play mode!");
@@ -269,15 +308,6 @@ public class Water : MonoBehaviour {
         } else {
             waterMaterial.DisableKeyword("CIRCULAR_WAVES");
         }
-    }
-
-    public void ToggleJesus() {
-        if (!Application.isPlaying) {
-            Debug.Log("Not in play mode!");
-            return;
-        }
-
-        letJesusTakeTheWheel = !letJesusTakeTheWheel;
     }
 
     private void CreateWaterPlane() {
@@ -390,7 +420,7 @@ public class Water : MonoBehaviour {
 
     void Update() {
         if (usingVertexDisplacement) {
-            if (updateStatics) {
+            if (updateStatics && !letJesusTakeTheWheel) {
                 waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
                 waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);
                 waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction);

@@ -36,6 +36,10 @@ public class WaterEditor : Editor {
     SerializedProperty amplitude1, amplitude2, amplitude3, amplitude4;
     SerializedProperty wavelength1, wavelength2, wavelength3, wavelength4;
     SerializedProperty steepness1, steepness2, steepness3, steepness4;
+    SerializedProperty medianWavelength, wavelengthRange;
+    SerializedProperty medianDirection, directionalRange;
+    SerializedProperty medianAmplitude;
+    SerializedProperty steepness;
 
     void OnEnable() {
         waterShader = serializedObject.FindProperty("waterShader");
@@ -67,6 +71,12 @@ public class WaterEditor : Editor {
         steepness2 = serializedObject.FindProperty("steepness2");
         steepness3 = serializedObject.FindProperty("steepness3");
         steepness4 = serializedObject.FindProperty("steepness4");
+        medianWavelength = serializedObject.FindProperty("medianWavelength");
+        wavelengthRange = serializedObject.FindProperty("wavelengthRange");
+        medianDirection = serializedObject.FindProperty("medianDirection");
+        directionalRange = serializedObject.FindProperty("directionalRange");
+        medianAmplitude = serializedObject.FindProperty("medianAmplitude");
+        steepness = serializedObject.FindProperty("steepness");
     }
 
     public override void OnInspectorGUI() {
@@ -120,8 +130,20 @@ public class WaterEditor : Editor {
         EditorGUILayout.Space();
 
         if (letJesusTakeTheWheel) {
+            EditorGUI.indentLevel--;
             EditorGUILayout.LabelField("Procedural Settings", EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
 
+            EditorGUILayout.Slider(medianWavelength, 0.0f, 3.0f, new GUIContent("Median Wavelength"));
+            EditorGUILayout.Slider(wavelengthRange, 0.0f, 2.0f, new GUIContent("Wavelength Range"));
+            EditorGUILayout.Slider(medianDirection, 0.0f, 360.0f, new GUIContent("Median Direction"));
+            EditorGUILayout.Slider(directionalRange, 0.0f, 360.0f, new GUIContent("Directional Range"));
+            EditorGUILayout.Slider(medianAmplitude, 0.0f, 3.0f, new GUIContent("Median Amplitude"));
+            EditorGUILayout.Slider(steepness, 0.0f, 1.0f, new GUIContent("Steepness"));
+            if (GUILayout.Button("Regenerate Waves")) {
+                Water water = (Water)target;
+                water.GenerateNewWaves();
+            }
         } else {
             EditorGUI.indentLevel--;
             EditorGUILayout.LabelField("Wave One", EditorStyles.boldLabel);
