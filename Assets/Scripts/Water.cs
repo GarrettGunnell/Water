@@ -189,7 +189,7 @@ public class Water : MonoBehaviour {
     public bool usingCircularWaves = false;
     public bool letJesusTakeTheWheel = true;
 
-    //Procedural Settings
+    // Procedural Settings
     public float medianWavelength = 1.0f;
     public float wavelengthRange = 1.0f;
     public float medianDirection = 0.0f;
@@ -198,6 +198,10 @@ public class Water : MonoBehaviour {
     public float medianSpeed = 1.0f;
     public float speedRange = 0.1f;
     public float steepness = 0.0f;
+
+    // Shader Settings
+    [ColorUsageAttribute(false, true)]
+    public Color ambient;
 
     public void ToggleJesus() {
         if (!Application.isPlaying) {
@@ -429,6 +433,8 @@ public class Water : MonoBehaviour {
     }
 
     void Update() {
+        waterMaterial.SetVector("_Ambient", ambient);
+
         if (usingVertexDisplacement) {
             if (updateStatics) {
                 if (letJesusTakeTheWheel) {

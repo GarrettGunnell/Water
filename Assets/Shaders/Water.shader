@@ -46,6 +46,8 @@ Shader "Custom/Water" {
 
 			//#define sin fastSine
 
+			#define PI 3.14159265358979323846
+
 			float fastSine(float x) {
 				return 1.0f;
 			}
@@ -177,6 +179,8 @@ Shader "Custom/Water" {
 				return 0.0f;
 			}
 
+			float3 _Ambient;
+
 			v2f vp(VertexData v) {
 				v2f i;
 
@@ -247,13 +251,16 @@ Shader "Custom/Water" {
 					normal = normalize(i.normal);
 				#endif
 
-                float3 ambient = float3(0.0f, 0.0f, 0.1f);
-                float3 diffuse = _LightColor0.rgb * DotClamped(lightDir, normal) * 0.5f + 0.5f;
-				diffuse *= diffuse;
-                float specular = _LightColor0.rgb * pow(DotClamped(normal, halfwayDir), 50.0f);
+				float ndotl = DotClamped(lightDir, normal);
+
+				float diffuse_reflectance = 1.0f / PI;
+                float3 diffuse = _LightColor0.rgb * ndotl * diffuse_reflectance;
+
+				float specularReflectance = 1.0f;
+                float specular = _LightColor0.rgb * specularReflectance * pow(DotClamped(normal, halfwayDir), 50.0f) * ndotl;
 
 
-                return float4(saturate(ambient + diffuse + specular), 1.0f);
+                return float4(saturate(_Ambient + diffuse + specular), 1.0f);
 			}
 
 			ENDCG

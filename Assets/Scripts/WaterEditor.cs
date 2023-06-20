@@ -42,6 +42,8 @@ public class WaterEditor : Editor {
     SerializedProperty medianAmplitude;
     SerializedProperty steepness;
 
+    SerializedProperty ambient;
+
     void OnEnable() {
         waterShader = serializedObject.FindProperty("waterShader");
         planeLength = serializedObject.FindProperty("planeLength");
@@ -80,6 +82,7 @@ public class WaterEditor : Editor {
         medianSpeed = serializedObject.FindProperty("medianSpeed");
         speedRange = serializedObject.FindProperty("speedRange");
         steepness = serializedObject.FindProperty("steepness");
+        ambient = serializedObject.FindProperty("ambient");
     }
 
     public override void OnInspectorGUI() {
@@ -194,6 +197,11 @@ public class WaterEditor : Editor {
             EditorGUILayout.Slider(wavelength4, wavelengthMin, wavelengthMax, new GUIContent("Wavelength"));
             EditorGUILayout.Slider(steepness4, steepnessMin, steepnessMax, new GUIContent("Steepness"));
         }
+        
+        EditorGUI.indentLevel--;
+        EditorGUILayout.LabelField("Material Settings", EditorStyles.boldLabel);
+        EditorGUI.indentLevel++;
+        EditorGUILayout.PropertyField(ambient);
 
         serializedObject.ApplyModifiedProperties();
     }
