@@ -218,12 +218,16 @@ public class Water : MonoBehaviour {
         float speedMax = medianSpeed + speedRange;
         float ampOverLen = medianAmplitude / medianWavelength;
 
+        float halfPlaneWidth = planeLength * 0.5f;
+        Vector3 minPoint = transform.TransformPoint(new Vector3(-halfPlaneWidth, 0.0f, -halfPlaneWidth));
+        Vector3 maxPoint = transform.TransformPoint(new Vector3(halfPlaneWidth, 0.0f, halfPlaneWidth));
+
         for (int wi = 0; wi < 4; ++wi) {
             float wavelength = UnityEngine.Random.Range(wavelengthMin, wavelengthMax);
             float direction = UnityEngine.Random.Range(directionMin, directionMax);
             float amplitude = wavelength * ampOverLen;
             float speed = UnityEngine.Random.Range(speedMin, speedMax);
-            Vector2 origin = new Vector2(0.0f, 0.0f);
+            Vector2 origin = new Vector2(UnityEngine.Random.Range(minPoint.x * 2, maxPoint.x * 2), UnityEngine.Random.Range(minPoint.x * 2, maxPoint.x * 2));
 
             waves[wi] = new Wave(wavelength, amplitude, speed, direction, steepness, waveType, origin, waveFunction);
         }
@@ -431,7 +435,7 @@ public class Water : MonoBehaviour {
                     waterMaterial.SetBuffer("_Waves", waveBuffer);
                     return;
                 }
-                
+
                 waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
                 waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);
                 waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction);

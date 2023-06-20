@@ -98,8 +98,6 @@ public class WaterEditor : Editor {
             water.CycleWaveFunction();
         }
         EditorGUILayout.Space();
-        EditorGUILayout.PropertyField(waveType);
-        EditorGUILayout.Space();
 
         usingVertexDisplacement = ((Water)target).usingVertexDisplacement;
         if (GUILayout.Button("Using GPU Vertex Displacement: " + usingVertexDisplacement.ToString())) {
@@ -150,7 +148,7 @@ public class WaterEditor : Editor {
             } else if (waveFunction == Water.WaveFunction.Gerstner) {
                 EditorGUILayout.Slider(steepness, 0.0f, 1.0f, new GUIContent("Steepness"));
             }
-            
+
             if (GUILayout.Button("Regenerate Waves")) {
                 Water water = (Water)target;
                 water.GenerateNewWaves();
