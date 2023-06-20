@@ -179,8 +179,8 @@ Shader "Custom/Water" {
 				return 0.0f;
 			}
 
-			float3 _Ambient, _DiffuseReflectance, _SpecularReflectance;
-			float _Shininess;
+			float3 _Ambient, _DiffuseReflectance, _SpecularReflectance, _FresnelColor;
+			float _Shininess, _FresnelBias, _FresnelStrength, _FresnelShininess;
 
 			v2f vp(VertexData v) {
 				v2f i;
@@ -260,8 +260,12 @@ Shader "Custom/Water" {
 				float3 specularReflectance = _SpecularReflectance;
                 float3 specular = _LightColor0.rgb * specularReflectance * pow(DotClamped(normal, halfwayDir), _Shininess) * ndotl;
 
+				float3 I = normalize(i.worldPos - _WorldSpaceCameraPos);
+				float R = _FresnelBias + _FresnelStrength * pow(1.0f + dot(I, normal), _FresnelShininess);
 
-                return float4(saturate(_Ambient + diffuse + specular), 1.0f);
+				float fresnel = _FresnelColor * R;
+
+                return float4(saturate(_Ambient + diffuse + specular + fresnel), 1.0f);
 			}
 
 			ENDCG

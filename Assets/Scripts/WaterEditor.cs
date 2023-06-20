@@ -46,6 +46,10 @@ public class WaterEditor : Editor {
     SerializedProperty diffuseReflectance;
     SerializedProperty specularReflectance;
     SerializedProperty shininess;
+    SerializedProperty fresnelColor;
+    SerializedProperty fresnelBias;
+    SerializedProperty fresnelShininess;
+    SerializedProperty fresnelStrength;
 
     void OnEnable() {
         waterShader = serializedObject.FindProperty("waterShader");
@@ -89,6 +93,10 @@ public class WaterEditor : Editor {
         diffuseReflectance = serializedObject.FindProperty("diffuseReflectance");
         specularReflectance = serializedObject.FindProperty("specularReflectance");
         shininess = serializedObject.FindProperty("shininess");
+        fresnelColor = serializedObject.FindProperty("fresnelColor");
+        fresnelBias = serializedObject.FindProperty("fresnelBias");
+        fresnelStrength = serializedObject.FindProperty("fresnelStrength");
+        fresnelShininess = serializedObject.FindProperty("fresnelShininess");
     }
 
     public override void OnInspectorGUI() {
@@ -210,7 +218,11 @@ public class WaterEditor : Editor {
         EditorGUILayout.PropertyField(ambient);
         EditorGUILayout.PropertyField(diffuseReflectance);
         EditorGUILayout.PropertyField(specularReflectance);
-            EditorGUILayout.Slider(shininess, 0.0f, 100.0f, new GUIContent("Shininess"));
+        EditorGUILayout.Slider(shininess, 0.0f, 100.0f, new GUIContent("Shininess"));
+        EditorGUILayout.PropertyField(fresnelColor);
+        EditorGUILayout.Slider(fresnelBias, 0.0f, 1.0f, new GUIContent("Fresnel Bias"));
+        EditorGUILayout.Slider(fresnelStrength, 0.0f, 1.0f, new GUIContent("Fresnel Strength"));
+        EditorGUILayout.Slider(fresnelShininess, 0.0f, 20.0f, new GUIContent("Fresnel Shininess"));
 
         serializedObject.ApplyModifiedProperties();
     }

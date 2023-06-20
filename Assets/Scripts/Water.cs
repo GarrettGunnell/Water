@@ -202,11 +202,19 @@ public class Water : MonoBehaviour {
     // Shader Settings
     [ColorUsageAttribute(false, true)]
     public Color ambient;
+
     [ColorUsageAttribute(false, true)]
     public Color diffuseReflectance;
+
     [ColorUsageAttribute(false, true)]
     public Color specularReflectance;
+
     public float shininess;
+
+    [ColorUsageAttribute(false, true)]
+    public Color fresnelColor;
+
+    public float fresnelBias, fresnelStrength, fresnelShininess;
 
     public void ToggleJesus() {
         if (!Application.isPlaying) {
@@ -441,7 +449,11 @@ public class Water : MonoBehaviour {
         waterMaterial.SetVector("_Ambient", ambient);
         waterMaterial.SetVector("_DiffuseReflectance", diffuseReflectance);
         waterMaterial.SetVector("_SpecularReflectance", specularReflectance);
+        waterMaterial.SetVector("_FresnelColor", fresnelColor);
         waterMaterial.SetFloat("_Shininess", shininess * 100);
+        waterMaterial.SetFloat("_FresnelBias", fresnelBias);
+        waterMaterial.SetFloat("_FresnelStrength", fresnelStrength);
+        waterMaterial.SetFloat("_FresnelShininess", fresnelShininess);
 
         if (usingVertexDisplacement) {
             if (updateStatics) {
