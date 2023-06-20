@@ -43,6 +43,9 @@ public class WaterEditor : Editor {
     SerializedProperty steepness;
 
     SerializedProperty ambient;
+    SerializedProperty diffuseReflectance;
+    SerializedProperty specularReflectance;
+    SerializedProperty shininess;
 
     void OnEnable() {
         waterShader = serializedObject.FindProperty("waterShader");
@@ -83,6 +86,9 @@ public class WaterEditor : Editor {
         speedRange = serializedObject.FindProperty("speedRange");
         steepness = serializedObject.FindProperty("steepness");
         ambient = serializedObject.FindProperty("ambient");
+        diffuseReflectance = serializedObject.FindProperty("diffuseReflectance");
+        specularReflectance = serializedObject.FindProperty("specularReflectance");
+        shininess = serializedObject.FindProperty("shininess");
     }
 
     public override void OnInspectorGUI() {
@@ -202,6 +208,9 @@ public class WaterEditor : Editor {
         EditorGUILayout.LabelField("Material Settings", EditorStyles.boldLabel);
         EditorGUI.indentLevel++;
         EditorGUILayout.PropertyField(ambient);
+        EditorGUILayout.PropertyField(diffuseReflectance);
+        EditorGUILayout.PropertyField(specularReflectance);
+            EditorGUILayout.Slider(shininess, 0.0f, 100.0f, new GUIContent("Shininess"));
 
         serializedObject.ApplyModifiedProperties();
     }

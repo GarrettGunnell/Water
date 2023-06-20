@@ -202,6 +202,11 @@ public class Water : MonoBehaviour {
     // Shader Settings
     [ColorUsageAttribute(false, true)]
     public Color ambient;
+    [ColorUsageAttribute(false, true)]
+    public Color diffuseReflectance;
+    [ColorUsageAttribute(false, true)]
+    public Color specularReflectance;
+    public float shininess;
 
     public void ToggleJesus() {
         if (!Application.isPlaying) {
@@ -434,6 +439,9 @@ public class Water : MonoBehaviour {
 
     void Update() {
         waterMaterial.SetVector("_Ambient", ambient);
+        waterMaterial.SetVector("_DiffuseReflectance", diffuseReflectance);
+        waterMaterial.SetVector("_SpecularReflectance", specularReflectance);
+        waterMaterial.SetFloat("_Shininess", shininess * 100);
 
         if (usingVertexDisplacement) {
             if (updateStatics) {

@@ -179,7 +179,8 @@ Shader "Custom/Water" {
 				return 0.0f;
 			}
 
-			float3 _Ambient;
+			float3 _Ambient, _DiffuseReflectance, _SpecularReflectance;
+			float _Shininess;
 
 			v2f vp(VertexData v) {
 				v2f i;
@@ -253,11 +254,11 @@ Shader "Custom/Water" {
 
 				float ndotl = DotClamped(lightDir, normal);
 
-				float diffuse_reflectance = 1.0f / PI;
-                float3 diffuse = _LightColor0.rgb * ndotl * diffuse_reflectance;
+				float3 diffuseReflectance = _DiffuseReflectance / PI;
+                float3 diffuse = _LightColor0.rgb * ndotl * diffuseReflectance;
 
-				float specularReflectance = 1.0f;
-                float specular = _LightColor0.rgb * specularReflectance * pow(DotClamped(normal, halfwayDir), 50.0f) * ndotl;
+				float3 specularReflectance = _SpecularReflectance;
+                float3 specular = _LightColor0.rgb * specularReflectance * pow(DotClamped(normal, halfwayDir), _Shininess) * ndotl;
 
 
                 return float4(saturate(_Ambient + diffuse + specular), 1.0f);
