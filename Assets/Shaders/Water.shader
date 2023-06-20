@@ -1,10 +1,21 @@
 Shader "Custom/Water" {
+		
+		Properties {
+			[Enum(Off, 0, On, 1)] _ZWrite ("Z Write", Float) = 1
+		}
+
 	SubShader {
+		Tags {
+			"RenderType" = "Transparent"
+			"Queue" = "Transparent"
+		}
+
+		GrabPass { "_WaterBackground" }
+
 		Pass {
-			Tags {
-				"RenderType" = "Opaque"
-                "LightMode" = "ForwardBase"
-			}
+
+			Blend SrcAlpha OneMinusSrcAlpha
+			ZWrite [_ZWrite]
 
 			CGPROGRAM
 
@@ -182,6 +193,10 @@ Shader "Custom/Water" {
 			float3 _Ambient, _DiffuseReflectance, _SpecularReflectance, _FresnelColor;
 			float _Shininess, _FresnelBias, _FresnelStrength, _FresnelShininess;
 
+			float4x4 _CameraInvViewProjection;
+			sampler2D _CameraDepthTexture, _WaterBackground;
+			float4 _WaterBackground_TexelSize;
+
 			v2f vp(VertexData v) {
 				v2f i;
 
@@ -229,6 +244,12 @@ Shader "Custom/Water" {
 				return i;
 			}
 
+			float3 ComputeWorldSpacePosition(float2 positionNDC, float deviceDepth) {
+				float4 positionCS = float4(positionNDC * 2.0 - 1.0, deviceDepth, 1.0);
+				float4 hpositionWS = mul(_CameraInvViewProjection, positionCS);
+				return hpositionWS.xyz / hpositionWS.w;
+			}
+
 			float4 fp(v2f i) : SV_TARGET {
                 float3 lightDir = _WorldSpaceLightPos0;
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
@@ -263,9 +284,22 @@ Shader "Custom/Water" {
 				float3 I = normalize(i.worldPos - _WorldSpaceCameraPos);
 				float R = _FresnelBias + _FresnelStrength * pow(1.0f + dot(I, normal), _FresnelShininess);
 
-				float fresnel = _FresnelColor * R;
+				float3 fresnel = _FresnelColor * R;
 
-                return float4(saturate(_Ambient + diffuse + specular + fresnel), 1.0f);
+				float2 uv = i.pos.xy / _ScreenParams.xy;
+				float2 backgroundUV = uv + _WaterBackground_TexelSize.xy * normal.xz * 20;
+
+				float4 backgroundColor = tex2D(_WaterBackground, backgroundUV);
+
+				float3 depthPos = ComputeWorldSpacePosition(uv, (SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv)));
+
+				float waterDepth = length(depthPos - i.worldPos);
+				
+				float3 beersLaw = exp(-waterDepth * 0.9f);
+
+				float4 albedo = float4(saturate(_Ambient + diffuse + specular + fresnel), ndotl);
+
+                return float4(lerp(albedo.rgb, backgroundColor * (1 - albedo.a) + albedo.rgb, saturate(beersLaw)), 1.0f);
 			}
 
 			ENDCG

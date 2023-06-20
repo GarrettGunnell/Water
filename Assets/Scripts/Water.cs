@@ -174,6 +174,8 @@ public class Water : MonoBehaviour {
         }
     }
 
+    private Camera cam;
+
     private Wave[] waves = new Wave[4];
     private ComputeBuffer waveBuffer;
 
@@ -443,6 +445,7 @@ public class Water : MonoBehaviour {
         CreateWaterPlane();
         CreateMaterial();
         CreateWaveBuffer();
+        cam = GameObject.Find("Main Camera").GetComponent<Camera>();
     }
 
     void Update() {
@@ -454,6 +457,10 @@ public class Water : MonoBehaviour {
         waterMaterial.SetFloat("_FresnelBias", fresnelBias);
         waterMaterial.SetFloat("_FresnelStrength", fresnelStrength);
         waterMaterial.SetFloat("_FresnelShininess", fresnelShininess);
+
+        Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(cam.projectionMatrix, false);
+        Matrix4x4 viewProjMatrix = projMatrix * cam.worldToCameraMatrix;
+        waterMaterial.SetMatrix("_CameraInvViewProjection", viewProjMatrix.inverse);
 
         if (usingVertexDisplacement) {
             if (updateStatics) {
