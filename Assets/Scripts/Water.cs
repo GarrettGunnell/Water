@@ -217,6 +217,7 @@ public class Water : MonoBehaviour {
     public Color fresnelColor;
 
     public float fresnelBias, fresnelStrength, fresnelShininess;
+    public float absorptionCoefficient;
 
     public void ToggleJesus() {
         if (!Application.isPlaying) {
@@ -457,6 +458,7 @@ public class Water : MonoBehaviour {
         waterMaterial.SetFloat("_FresnelBias", fresnelBias);
         waterMaterial.SetFloat("_FresnelStrength", fresnelStrength);
         waterMaterial.SetFloat("_FresnelShininess", fresnelShininess);
+        waterMaterial.SetFloat("_AbsorptionCoefficient", absorptionCoefficient);
 
         Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(cam.projectionMatrix, false);
         Matrix4x4 viewProjMatrix = projMatrix * cam.worldToCameraMatrix;

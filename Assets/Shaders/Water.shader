@@ -6,7 +6,7 @@ Shader "Custom/Water" {
 
 	SubShader {
 		Tags {
-			"RenderType" = "Transparent"
+			"RenderType" = "Opaque"
 			"Queue" = "Transparent"
 		}
 
@@ -14,8 +14,7 @@ Shader "Custom/Water" {
 
 		Pass {
 
-			Blend SrcAlpha OneMinusSrcAlpha
-			ZWrite [_ZWrite]
+			ZWrite On
 
 			CGPROGRAM
 
@@ -192,6 +191,7 @@ Shader "Custom/Water" {
 
 			float3 _Ambient, _DiffuseReflectance, _SpecularReflectance, _FresnelColor;
 			float _Shininess, _FresnelBias, _FresnelStrength, _FresnelShininess;
+			float _AbsorptionCoefficient;
 
 			float4x4 _CameraInvViewProjection;
 			sampler2D _CameraDepthTexture, _WaterBackground;
@@ -287,18 +287,17 @@ Shader "Custom/Water" {
 				float3 fresnel = _FresnelColor * R;
 
 				float2 uv = i.pos.xy / _ScreenParams.xy;
-				float2 backgroundUV = uv + _WaterBackground_TexelSize.xy * normal.xz * 20;
 
-				float4 backgroundColor = tex2D(_WaterBackground, backgroundUV);
+				float4 backgroundColor = tex2D(_WaterBackground, uv);
 
 				float3 depthPos = ComputeWorldSpacePosition(uv, (SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv)));
 
 				float waterDepth = length(depthPos - i.worldPos);
 				
-				float3 beersLaw = exp(-waterDepth * 0.9f);
+				float3 beersLaw = exp(-waterDepth * _AbsorptionCoefficient);
 
 				float4 albedo = float4(saturate(_Ambient + diffuse + specular + fresnel), ndotl);
-
+				
                 return float4(lerp(albedo.rgb, backgroundColor * (1 - albedo.a) + albedo.rgb, saturate(beersLaw)), 1.0f);
 			}
 

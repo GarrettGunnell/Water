@@ -50,6 +50,7 @@ public class WaterEditor : Editor {
     SerializedProperty fresnelBias;
     SerializedProperty fresnelShininess;
     SerializedProperty fresnelStrength;
+    SerializedProperty absorptionCoefficient;
 
     void OnEnable() {
         waterShader = serializedObject.FindProperty("waterShader");
@@ -97,6 +98,7 @@ public class WaterEditor : Editor {
         fresnelBias = serializedObject.FindProperty("fresnelBias");
         fresnelStrength = serializedObject.FindProperty("fresnelStrength");
         fresnelShininess = serializedObject.FindProperty("fresnelShininess");
+        absorptionCoefficient = serializedObject.FindProperty("absorptionCoefficient");
     }
 
     public override void OnInspectorGUI() {
@@ -223,6 +225,7 @@ public class WaterEditor : Editor {
         EditorGUILayout.Slider(fresnelBias, 0.0f, 1.0f, new GUIContent("Fresnel Bias"));
         EditorGUILayout.Slider(fresnelStrength, 0.0f, 1.0f, new GUIContent("Fresnel Strength"));
         EditorGUILayout.Slider(fresnelShininess, 0.0f, 20.0f, new GUIContent("Fresnel Shininess"));
+        EditorGUILayout.Slider(absorptionCoefficient, 0.0f, 2.0f, new GUIContent("Absorption Coefficient"));
 
         serializedObject.ApplyModifiedProperties();
     }
