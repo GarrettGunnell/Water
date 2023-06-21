@@ -42,6 +42,8 @@ public class WaterEditor : Editor {
     SerializedProperty medianAmplitude;
     SerializedProperty steepness;
 
+    SerializedProperty waveCount;
+
     SerializedProperty ambient;
     SerializedProperty diffuseReflectance;
     SerializedProperty specularReflectance;
@@ -99,6 +101,7 @@ public class WaterEditor : Editor {
         fresnelStrength = serializedObject.FindProperty("fresnelStrength");
         fresnelShininess = serializedObject.FindProperty("fresnelShininess");
         absorptionCoefficient = serializedObject.FindProperty("absorptionCoefficient");
+        waveCount = serializedObject.FindProperty("waveCount");
     }
 
     public override void OnInspectorGUI() {
@@ -154,6 +157,7 @@ public class WaterEditor : Editor {
             EditorGUILayout.LabelField("Procedural Settings", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
 
+            EditorGUILayout.IntSlider(waveCount, 0, 64, new GUIContent("Wave Count"));
             EditorGUILayout.Slider(medianWavelength, 0.0f, 3.0f, new GUIContent("Median Wavelength"));
             EditorGUILayout.Slider(wavelengthRange, 0.0f, 2.0f, new GUIContent("Wavelength Range"));
             EditorGUILayout.Slider(medianDirection, 0.0f, 360.0f, new GUIContent("Median Direction"));

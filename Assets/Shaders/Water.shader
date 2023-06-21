@@ -189,6 +189,8 @@ Shader "Custom/Water" {
 				return 0.0f;
 			}
 
+			const int _WaveCount;
+
 			float3 _Ambient, _DiffuseReflectance, _SpecularReflectance, _FresnelColor;
 			float _Shininess, _FresnelBias, _FresnelStrength, _FresnelShininess;
 			float _AbsorptionCoefficient;
@@ -196,6 +198,16 @@ Shader "Custom/Water" {
 			float4x4 _CameraInvViewProjection;
 			sampler2D _CameraDepthTexture, _WaterBackground;
 			float4 _WaterBackground_TexelSize;
+
+			float hash(uint n) {
+				// integer hash copied from Hugo Elias
+				n = (n << 13U) ^ n;
+				n = n * (n * n * 15731U + 0x789221U) + 0x1376312589U;
+				return float(n & uint(0x7fffffffU)) / float(0x7fffffff);
+			}
+
+			
+			#define CHOPPINESS 1232.34999345f;
 
 			v2f vp(VertexData v) {
 				v2f i;
@@ -206,8 +218,7 @@ Shader "Custom/Water" {
 					float3 h = 0.0f;
 					float3 n = 0.0f;
 
-					[unroll]
-					for (int wi = 0; wi < 4; ++wi) {
+					for (int wi = 0; wi < _WaveCount; ++wi) {
 						h += CalculateOffset(i.worldPos, _Waves[wi]);
 
 						#ifndef GERSTNER_WAVE
@@ -216,15 +227,34 @@ Shader "Custom/Water" {
 							#endif
 						#endif
 					}
+					/*
+					float G = exp2(-1);
+					float f = 0.5f;
+					float a = 0.5f;
+					float t = 0.0f;
+					float timeMult = 1.0f;
+					float iter = 0.0f;
+					float3 p = i.worldPos;
 
+					for (int wi = 0; wi < 8; ++wi) {
+						float2 d = normalize(float2(cos(iter), sin(iter)));
+						float x = dot(d, p.xz) * f + _Time.y * timeMult;
+						t += a * exp(sin(x) - 1);
+						f *= 2.0f;
+						a *= G;
+						timeMult *= 1.07;
+						iter += CHOPPINESS;
+					}
+
+					h = float3(0.0f, t, 0.0f);
+					*/
 					float4 newPos = v.vertex + float4(h, 0.0f);
 					i.worldPos = mul(unity_ObjectToWorld, newPos);
 					i.pos = UnityObjectToClipPos(newPos);
 					
 					#ifndef NORMALS_IN_PIXEL_SHADER
 					#ifdef GERSTNER_WAVE
-						[unroll]
-						for (int wi = 0; wi < 4; ++wi) {
+						for (int wi = 0; wi < _WaveCount; ++wi) {
 							n += CalculateNormal(i.worldPos, _Waves[wi]);
 						}
 
@@ -258,11 +288,34 @@ Shader "Custom/Water" {
 				float3 normal = 0.0f;
 
 				#ifdef NORMALS_IN_PIXEL_SHADER
-				[unroll]
-				for (int wi = 0; wi < 4; ++wi) {
+
+				for (int wi = 0; wi < _WaveCount; ++wi) {
 					normal += CalculateNormal(i.worldPos, _Waves[wi]);
 				}
+				/*
+				float G = exp2(-1);
+				float f = 1.0f;
+				float a = 0.5f;
+				float2 t = 0.0f;
+				float timeMult = 1.0f;
+				float iter = 0.0f;
 
+				float3 p = i.worldPos;
+
+				[unroll]
+				for (int wi = 0; wi < 32; ++wi) {
+					float2 d = normalize(float2(cos(iter), sin(iter)));
+					float x = dot(d, p.xz) * f + _Time.y * timeMult;
+					float wave = a * exp(sin(x) - 1);
+					t += f * d * wave * cos(x);
+					f *= 1.5f;
+					timeMult *= 1.27;
+					a *= G;
+					iter += CHOPPINESS;
+				}
+
+				normal = float3(t.x, t.y, 0.0f);
+				*/
 				#ifdef GERSTNER_WAVE
 					normal = normalize(UnityObjectToWorldNormal(normalize(float3(-normal.x, 1.0f - normal.y, -normal.z))));
 				#else
@@ -279,7 +332,8 @@ Shader "Custom/Water" {
                 float3 diffuse = _LightColor0.rgb * ndotl * diffuseReflectance;
 
 				float3 specularReflectance = _SpecularReflectance;
-                float3 specular = _LightColor0.rgb * specularReflectance * pow(DotClamped(normal, halfwayDir), _Shininess) * ndotl;
+				float spec = pow(DotClamped(normal, halfwayDir), _Shininess) * ndotl;
+                float3 specular = _LightColor0.rgb * specularReflectance * spec;
 
 				float3 I = normalize(i.worldPos - _WorldSpaceCameraPos);
 				float R = _FresnelBias + _FresnelStrength * pow(1.0f + dot(I, normal), _FresnelShininess);
@@ -296,9 +350,9 @@ Shader "Custom/Water" {
 				
 				float3 beersLaw = exp(-waterDepth * _AbsorptionCoefficient);
 
-				float4 albedo = float4(saturate(_Ambient + diffuse + specular + fresnel), ndotl);
+				float4 albedo = float4(saturate(_Ambient + diffuse + specular + fresnel), saturate(R + spec));
 				
-                return float4(lerp(albedo.rgb, backgroundColor * (1 - albedo.a) + albedo.rgb, saturate(beersLaw)), 1.0f);
+                return float4(lerp(albedo.rgb, backgroundColor * (1 - albedo.a) + albedo.rgb, saturate(beersLaw - R - spec)), 1.0f);
 			}
 
 			ENDCG

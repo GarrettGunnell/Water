@@ -64,13 +64,13 @@ public class Water : MonoBehaviour {
         public float steepness;
         public WaveType waveType;
 
-        public Wave(float wavelength, float amplitude, float speed, float direction, float steepness, WaveType waveType, Vector2 origin, WaveFunction waveFunction) {
+        public Wave(float wavelength, float amplitude, float speed, float direction, float steepness, WaveType waveType, Vector2 origin, WaveFunction waveFunction, int waveCount) {
             this.frequency = 2.0f / wavelength;
             this.amplitude = amplitude;
             this.phase = speed * Mathf.Sqrt(9.8f * 2.0f * Mathf.PI / wavelength);;
 
             if (waveFunction == WaveFunction.Gerstner)
-                this.steepness = steepness / this.frequency * this.amplitude * 4.0f;
+                this.steepness = steepness / this.frequency * this.amplitude * (float)waveCount;
             else
                 this.steepness = steepness;
             
@@ -176,7 +176,7 @@ public class Water : MonoBehaviour {
 
     private Camera cam;
 
-    private Wave[] waves = new Wave[4];
+    private Wave[] waves = new Wave[64];
     private ComputeBuffer waveBuffer;
 
     private Material waterMaterial;
@@ -192,6 +192,7 @@ public class Water : MonoBehaviour {
     public bool letJesusTakeTheWheel = true;
 
     // Procedural Settings
+    public int waveCount = 4;
     public float medianWavelength = 1.0f;
     public float wavelengthRange = 1.0f;
     public float medianDirection = 0.0f;
@@ -242,14 +243,14 @@ public class Water : MonoBehaviour {
         Vector3 minPoint = transform.TransformPoint(new Vector3(-halfPlaneWidth, 0.0f, -halfPlaneWidth));
         Vector3 maxPoint = transform.TransformPoint(new Vector3(halfPlaneWidth, 0.0f, halfPlaneWidth));
 
-        for (int wi = 0; wi < 4; ++wi) {
+        for (int wi = 0; wi < waveCount; ++wi) {
             float wavelength = UnityEngine.Random.Range(wavelengthMin, wavelengthMax);
             float direction = UnityEngine.Random.Range(directionMin, directionMax);
             float amplitude = wavelength * ampOverLen;
             float speed = UnityEngine.Random.Range(speedMin, speedMax);
             Vector2 origin = new Vector2(UnityEngine.Random.Range(minPoint.x * 2, maxPoint.x * 2), UnityEngine.Random.Range(minPoint.x * 2, maxPoint.x * 2));
 
-            waves[wi] = new Wave(wavelength, amplitude, speed, direction, steepness, waveType, origin, waveFunction);
+            waves[wi] = new Wave(wavelength, amplitude, speed, direction, steepness, waveType, origin, waveFunction, waveCount);
         }
 
         waveBuffer.SetData(waves);
@@ -437,7 +438,7 @@ public class Water : MonoBehaviour {
     void CreateWaveBuffer() {
         if (waveBuffer != null) return;
 
-        waveBuffer = new ComputeBuffer(4, SizeOf(typeof(Wave)));
+        waveBuffer = new ComputeBuffer(64, SizeOf(typeof(Wave)));
 
         waterMaterial.SetBuffer("_Waves", waveBuffer);
     }
@@ -459,6 +460,7 @@ public class Water : MonoBehaviour {
         waterMaterial.SetFloat("_FresnelStrength", fresnelStrength);
         waterMaterial.SetFloat("_FresnelShininess", fresnelShininess);
         waterMaterial.SetFloat("_AbsorptionCoefficient", absorptionCoefficient);
+        waterMaterial.SetInt("_WaveCount", waveCount);
 
         Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(cam.projectionMatrix, false);
         Matrix4x4 viewProjMatrix = projMatrix * cam.worldToCameraMatrix;
@@ -471,19 +473,22 @@ public class Water : MonoBehaviour {
                     return;
                 }
 
-                waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
-                waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);
-                waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction);
-                waves[3] = new Wave(wavelength4, amplitude4, speed4, direction4, steepness4, waveType, origin4, waveFunction);
+                waterMaterial.SetInt("_WaveCount", 4);
+
+                waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction, waveCount);
+                waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction, waveCount);
+                waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction, waveCount);
+                waves[3] = new Wave(wavelength4, amplitude4, speed4, direction4, steepness4, waveType, origin4, waveFunction, waveCount);
 
                 waveBuffer.SetData(waves);
                 waterMaterial.SetBuffer("_Waves", waveBuffer);
             }
         } else {
-            waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction);
-            waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction);
-            waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction);
-            waves[3] = new Wave(wavelength4, amplitude4, speed4, direction4, steepness4, waveType, origin4, waveFunction);
+            waterMaterial.SetInt("_WaveCount", 4);
+            waves[0] = new Wave(wavelength1, amplitude1, speed1, direction1, steepness1, waveType, origin1, waveFunction, waveCount);
+            waves[1] = new Wave(wavelength2, amplitude2, speed2, direction2, steepness2, waveType, origin2, waveFunction, waveCount);
+            waves[2] = new Wave(wavelength3, amplitude3, speed3, direction3, steepness3, waveType, origin3, waveFunction, waveCount);
+            waves[3] = new Wave(wavelength4, amplitude4, speed4, direction4, steepness4, waveType, origin4, waveFunction, waveCount);
 
             if (vertices != null) {
                 for (int i = 0; i < vertices.Length; ++i) {
@@ -566,7 +571,7 @@ public class Water : MonoBehaviour {
             Gizmos.color = Color.black;
             Gizmos.DrawSphere(transform.TransformPoint(displacedVertices[i]), 0.1f);
             Gizmos.color = Color.yellow;
-            Gizmos.DrawRay(transform.TransformPoint(displacedVertices[i]), normals[i]);
+            Gizmos.DrawRay(transform.TransformPoint(displacedVertices[i]), displacedNormals[i]);
         }
     }
 }
