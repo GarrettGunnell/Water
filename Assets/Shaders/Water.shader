@@ -27,6 +27,7 @@ Shader "Custom/Water" {
 			#pragma shader_feature GERSTNER_WAVE
 			#pragma shader_feature NORMALS_IN_PIXEL_SHADER
 			#pragma shader_feature CIRCULAR_WAVES
+			#pragma shader_feature USE_FBM
 
 			#include "UnityPBSLighting.cginc"
             #include "AutoLight.cginc"
@@ -189,7 +190,101 @@ Shader "Custom/Water" {
 				return 0.0f;
 			}
 
-			const int _WaveCount;
+			float hash(uint n) {
+				// integer hash copied from Hugo Elias
+				n = (n << 13U) ^ n;
+				n = n * (n * n * 15731U + 0x789221U) + 0x1376312589U;
+				return float(n & uint(0x7fffffffU)) / float(0x7fffffff);
+			}
+
+			float _VertexSeed, _VertexSeedIter, _VertexFrequency, _VertexFrequencyMult, _VertexAmplitude, _VertexAmplitudeMult, _VertexInitialSpeed, _VertexSpeedRamp, _VertexDrag, _VertexHeight, _VertexMaxPeak, _VertexPeakOffset;
+			float _FragmentSeed, _FragmentSeedIter, _FragmentFrequency, _FragmentFrequencyMult, _FragmentAmplitude, _FragmentAmplitudeMult, _FragmentInitialSpeed, _FragmentSpeedRamp, _FragmentDrag, _FragmentHeight, _FragmentMaxPeak, _FragmentPeakOffset;
+			float _NormalStrength;
+			
+			int _WaveCount;
+			int _VertexWaveCount;
+			int _FragmentWaveCount;
+
+			float3 vertexFBM(float3 v) {
+				float f = _VertexFrequency;
+				float a = _VertexAmplitude;
+				float speed = _VertexInitialSpeed;
+				float seed = _VertexSeed;
+				float3 p = v;
+				float amplitudeSum = 0.0f;
+
+				float h = 0.0f;
+				float2 n = 0.0f;
+				for (int wi = 0; wi < _VertexWaveCount; ++wi) {
+					float2 d = normalize(float2(cos(seed), sin(seed)));
+
+					float x = dot(d, p.xz) * f + _Time.y * speed;
+					float wave = a * exp(_VertexMaxPeak * sin(x) - _VertexPeakOffset);
+					float dx = _VertexMaxPeak * wave * cos(x);
+					
+					h += wave;
+					
+					p.xz += d * -dx * a * _VertexDrag;
+
+					amplitudeSum += a;
+					f *= _VertexFrequencyMult;
+					a *= _VertexAmplitudeMult;
+					speed *= _VertexSpeedRamp;
+					seed += _VertexSeedIter;
+				}
+
+				float3 output = float3(h, n.x, n.y) / amplitudeSum;
+				output.x *= _VertexHeight;
+
+				return output;
+			}
+
+			float3 fragmentFBM(float3 v) {
+				float f = _FragmentFrequency;
+				float a = _FragmentAmplitude;
+				float speed = _FragmentInitialSpeed;
+				float seed = _FragmentSeed;
+				float3 p = v;
+
+				float h = 0.0f;
+				float2 n = 0.0f;
+				
+				float amplitudeSum = 0.0f;
+
+				for (int wi = 0; wi < _FragmentWaveCount; ++wi) {
+					float2 d = normalize(float2(cos(seed), sin(seed)));
+
+					float x = dot(d, p.xz) * f + _Time.y * speed;
+					float wave = a * exp(_FragmentMaxPeak * sin(x) - _FragmentPeakOffset);
+					
+					h += wave;
+					p.xz += d * -(_FragmentMaxPeak * wave * cos(x)) * a * _FragmentDrag;
+					
+					n += f * d * wave * cos(x);
+					
+					amplitudeSum += a;
+					f *= _FragmentFrequencyMult;
+					a *= _FragmentAmplitudeMult;
+					speed *= _FragmentSpeedRamp;
+					seed += _FragmentSeedIter;
+				}
+				
+				float3 output = float3(h, n.x, n.y) / amplitudeSum;
+				output.x *= _FragmentHeight;
+
+				return output;
+			}
+
+			float3 centralDifferenceNormal(float3 v, float epsilon) {
+				float2 ex = float2(epsilon, 0);
+				float h = fragmentFBM(v).x;
+				float3 a = float3(v.x, h, v.z);
+
+				float3 b = a - float3(v.x - epsilon, fragmentFBM(v - ex.xyy).x, v.z);
+				float3 c = a - float3(v.x, fragmentFBM(v + ex.yyx).x, v.z + epsilon);
+
+				return normalize(cross(b, c));
+			}
 
 			float3 _Ambient, _DiffuseReflectance, _SpecularReflectance, _FresnelColor;
 			float _Shininess, _FresnelBias, _FresnelStrength, _FresnelShininess;
@@ -198,16 +293,6 @@ Shader "Custom/Water" {
 			float4x4 _CameraInvViewProjection;
 			sampler2D _CameraDepthTexture, _WaterBackground;
 			float4 _WaterBackground_TexelSize;
-
-			float hash(uint n) {
-				// integer hash copied from Hugo Elias
-				n = (n << 13U) ^ n;
-				n = n * (n * n * 15731U + 0x789221U) + 0x1376312589U;
-				return float(n & uint(0x7fffffffU)) / float(0x7fffffff);
-			}
-
-			
-			#define CHOPPINESS 1232.34999345f;
 
 			v2f vp(VertexData v) {
 				v2f i;
@@ -218,6 +303,12 @@ Shader "Custom/Water" {
 					float3 h = 0.0f;
 					float3 n = 0.0f;
 
+					#ifdef USE_FBM
+					float3 fbm = vertexFBM(i.worldPos);
+
+					h.y = fbm.x;
+					n.xy = fbm.yz;
+					#else
 					for (int wi = 0; wi < _WaveCount; ++wi) {
 						h += CalculateOffset(i.worldPos, _Waves[wi]);
 
@@ -227,27 +318,8 @@ Shader "Custom/Water" {
 							#endif
 						#endif
 					}
-					/*
-					float G = exp2(-1);
-					float f = 0.5f;
-					float a = 0.5f;
-					float t = 0.0f;
-					float timeMult = 1.0f;
-					float iter = 0.0f;
-					float3 p = i.worldPos;
+					#endif
 
-					for (int wi = 0; wi < 8; ++wi) {
-						float2 d = normalize(float2(cos(iter), sin(iter)));
-						float x = dot(d, p.xz) * f + _Time.y * timeMult;
-						t += a * exp(sin(x) - 1);
-						f *= 2.0f;
-						a *= G;
-						timeMult *= 1.07;
-						iter += CHOPPINESS;
-					}
-
-					h = float3(0.0f, t, 0.0f);
-					*/
 					float4 newPos = v.vertex + float4(h, 0.0f);
 					i.worldPos = mul(unity_ObjectToWorld, newPos);
 					i.pos = UnityObjectToClipPos(newPos);
@@ -289,33 +361,13 @@ Shader "Custom/Water" {
 
 				#ifdef NORMALS_IN_PIXEL_SHADER
 
+				#ifdef USE_FBM
+					normal.xy = fragmentFBM(i.worldPos).yz * _NormalStrength;
+				#else
 				for (int wi = 0; wi < _WaveCount; ++wi) {
 					normal += CalculateNormal(i.worldPos, _Waves[wi]);
 				}
-				/*
-				float G = exp2(-1);
-				float f = 1.0f;
-				float a = 0.5f;
-				float2 t = 0.0f;
-				float timeMult = 1.0f;
-				float iter = 0.0f;
-
-				float3 p = i.worldPos;
-
-				[unroll]
-				for (int wi = 0; wi < 32; ++wi) {
-					float2 d = normalize(float2(cos(iter), sin(iter)));
-					float x = dot(d, p.xz) * f + _Time.y * timeMult;
-					float wave = a * exp(sin(x) - 1);
-					t += f * d * wave * cos(x);
-					f *= 1.5f;
-					timeMult *= 1.27;
-					a *= G;
-					iter += CHOPPINESS;
-				}
-
-				normal = float3(t.x, t.y, 0.0f);
-				*/
+				#endif
 				#ifdef GERSTNER_WAVE
 					normal = normalize(UnityObjectToWorldNormal(normalize(float3(-normal.x, 1.0f - normal.y, -normal.z))));
 				#else
@@ -325,6 +377,8 @@ Shader "Custom/Water" {
 				#else
 					normal = normalize(i.normal);
 				#endif
+
+				//normal = centralDifferenceNormal(i.worldPos, 0.01f);
 
 				float ndotl = DotClamped(lightDir, normal);
 

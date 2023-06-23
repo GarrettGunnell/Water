@@ -190,6 +190,7 @@ public class Water : MonoBehaviour {
     public bool usingPixelShaderNormals = true;
     public bool usingCircularWaves = false;
     public bool letJesusTakeTheWheel = true;
+    public bool usingFBM = false;
 
     // Procedural Settings
     public int waveCount = 4;
@@ -201,6 +202,37 @@ public class Water : MonoBehaviour {
     public float medianSpeed = 1.0f;
     public float speedRange = 0.1f;
     public float steepness = 0.0f;
+
+    // FBM Settings
+    public int vertexWaveCount = 8;
+    public int fragmentWaveCount = 40;
+    
+    public float vertexSeed = 0;
+    public float vertexSeedIter = 1253.2131f;
+    public float vertexFrequency = 1.0f;
+    public float vertexFrequencyMult = 1.18f;
+    public float vertexAmplitude = 1.0f;
+    public float vertexAmplitudeMult = 0.82f;
+    public float vertexInitialSpeed = 2.0f;
+    public float vertexSpeedRamp = 1.07f;
+    public float vertexDrag = 1.0f;
+    public float vertexHeight = 1.0f;
+    public float vertexMaxPeak = 1.0f;
+    public float vertexPeakOffset = 1.0f;
+    public float fragmentSeed = 0;
+    public float fragmentSeedIter = 1253.2131f;
+    public float fragmentFrequency = 1.0f;
+    public float fragmentFrequencyMult = 1.18f;
+    public float fragmentAmplitude = 1.0f;
+    public float fragmentAmplitudeMult = 0.82f;
+    public float fragmentInitialSpeed = 2.0f;
+    public float fragmentSpeedRamp = 1.07f;
+    public float fragmentDrag = 1.0f;
+    public float fragmentHeight = 1.0f;
+    public float fragmentMaxPeak = 1.0f;
+    public float fragmentPeakOffset = 1.0f; 
+    
+    public float normalStrength = 1;
 
     // Shader Settings
     [ColorUsageAttribute(false, true)]
@@ -340,6 +372,21 @@ public class Water : MonoBehaviour {
         }
     }
 
+    public void ToggleFBM() {
+        if (!Application.isPlaying) {
+            Debug.Log("Not in play mode!");
+            return;
+        }
+
+        usingFBM = !usingFBM;
+
+        if (usingFBM) {
+            waterMaterial.EnableKeyword("USE_FBM");
+        } else {
+            waterMaterial.DisableKeyword("USE_FBM");
+        }
+    }
+
     private void CreateWaterPlane() {
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
         mesh.name = "Water";
@@ -414,21 +461,25 @@ public class Water : MonoBehaviour {
         if (usingVertexDisplacement) {
             waterMaterial.EnableKeyword("USE_VERTEX_DISPLACEMENT");
             waterMaterial.SetBuffer("_Waves", waveBuffer);
-        } else {
+        } else
             waterMaterial.DisableKeyword("USE_VERTEX_DISPLACEMENT");
-        }
+        
 
-        if (usingPixelShaderNormals) {
+        if (usingPixelShaderNormals)
             waterMaterial.EnableKeyword("NORMALS_IN_PIXEL_SHADER");
-        } else {
+        else
             waterMaterial.DisableKeyword("NORMALS_IN_PIXEL_SHADER");
-        }
-
-        if (usingCircularWaves) {
+        
+        if (usingCircularWaves)
             waterMaterial.EnableKeyword("CIRCULAR_WAVES");
-        } else {
+        else
             waterMaterial.DisableKeyword("CIRCULAR_WAVES");
-        }
+        
+        if (usingFBM)
+            waterMaterial.EnableKeyword("USE_FBM");
+        else
+            waterMaterial.DisableKeyword("USE_FBM");
+        
 
         MeshRenderer renderer = GetComponent<MeshRenderer>();
 
@@ -469,6 +520,34 @@ public class Water : MonoBehaviour {
         if (usingVertexDisplacement) {
             if (updateStatics) {
                 if (letJesusTakeTheWheel) {
+                    waterMaterial.SetInt("_VertexWaveCount", vertexWaveCount);
+                    waterMaterial.SetFloat("_VertexSeed", vertexSeed);
+                    waterMaterial.SetFloat("_VertexSeedIter", vertexSeedIter);
+                    waterMaterial.SetFloat("_VertexFrequency", vertexFrequency);
+                    waterMaterial.SetFloat("_VertexFrequencyMult", vertexFrequencyMult);
+                    waterMaterial.SetFloat("_VertexAmplitude", vertexAmplitude);
+                    waterMaterial.SetFloat("_VertexAmplitudeMult", vertexAmplitudeMult);
+                    waterMaterial.SetFloat("_VertexInitialSpeed", vertexInitialSpeed);
+                    waterMaterial.SetFloat("_VertexSpeedRamp", vertexSpeedRamp);
+                    waterMaterial.SetFloat("_VertexDrag", vertexDrag);
+                    waterMaterial.SetFloat("_VertexHeight", vertexHeight);
+                    waterMaterial.SetFloat("_VertexMaxPeak", vertexMaxPeak);
+                    waterMaterial.SetFloat("_VertexPeakOffset", vertexPeakOffset);
+                    waterMaterial.SetInt("_FragmentWaveCount", fragmentWaveCount);
+                    waterMaterial.SetFloat("_FragmentSeed", fragmentSeed);
+                    waterMaterial.SetFloat("_FragmentSeedIter", fragmentSeedIter);
+                    waterMaterial.SetFloat("_FragmentFrequency", fragmentFrequency);
+                    waterMaterial.SetFloat("_FragmentFrequencyMult", fragmentFrequencyMult);
+                    waterMaterial.SetFloat("_FragmentAmplitude", fragmentAmplitude);
+                    waterMaterial.SetFloat("_FragmentAmplitudeMult", fragmentAmplitudeMult);
+                    waterMaterial.SetFloat("_FragmentInitialSpeed", fragmentInitialSpeed);
+                    waterMaterial.SetFloat("_FragmentSpeedRamp", fragmentSpeedRamp);
+                    waterMaterial.SetFloat("_FragmentDrag", fragmentDrag);
+                    waterMaterial.SetFloat("_FragmentHeight", fragmentHeight);
+                    waterMaterial.SetFloat("_FragmentMaxPeak", fragmentMaxPeak);
+                    waterMaterial.SetFloat("_FragmentPeakOffset", fragmentPeakOffset);
+                    waterMaterial.SetFloat("_NormalStrength", normalStrength);
+
                     waterMaterial.SetBuffer("_Waves", waveBuffer);
                     return;
                 }
