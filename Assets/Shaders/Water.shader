@@ -7,6 +7,7 @@ Shader "Custom/Water" {
 	SubShader {
 		Tags {
 			"RenderType" = "Opaque"
+			"LightMode" = "ForwardBase"
 			"Queue" = "Transparent"
 		}
 
@@ -256,11 +257,12 @@ Shader "Custom/Water" {
 
 					float x = dot(d, p.xz) * f + _Time.y * speed;
 					float wave = a * exp(_FragmentMaxPeak * sin(x) - _FragmentPeakOffset);
+					float2 dw = f * d * (_FragmentMaxPeak * wave * cos(x));
 					
 					h += wave;
-					p.xz += d * -(_FragmentMaxPeak * wave * cos(x)) * a * _FragmentDrag;
+					p.xz += -dw * a * _FragmentDrag;
 					
-					n += f * d * wave * cos(x);
+					n += dw;
 					
 					amplitudeSum += a;
 					f *= _FragmentFrequencyMult;
@@ -358,11 +360,14 @@ Shader "Custom/Water" {
                 float3 halfwayDir = normalize(lightDir + viewDir);
 
 				float3 normal = 0.0f;
+				float height = 0.0f;
 
 				#ifdef NORMALS_IN_PIXEL_SHADER
 
 				#ifdef USE_FBM
-					normal.xy = fragmentFBM(i.worldPos).yz * _NormalStrength;
+					float3 fbm = fragmentFBM(i.worldPos);
+					height = fbm.x;
+					normal.xy = fbm.yz * _NormalStrength;
 				#else
 				for (int wi = 0; wi < _WaveCount; ++wi) {
 					normal += CalculateNormal(i.worldPos, _Waves[wi]);
@@ -386,7 +391,10 @@ Shader "Custom/Water" {
                 float3 diffuse = _LightColor0.rgb * ndotl * diffuseReflectance;
 
 				float3 specularReflectance = _SpecularReflectance;
-				float spec = pow(DotClamped(normal, halfwayDir), _Shininess) * ndotl;
+				float3 specNormal = normal;
+				specNormal.xz *= 5.0f;
+				specNormal = normalize(specNormal);
+				float spec = pow(DotClamped(specNormal, halfwayDir), _Shininess) * ndotl;
                 float3 specular = _LightColor0.rgb * specularReflectance * spec;
 
 				float3 I = normalize(i.worldPos - _WorldSpaceCameraPos);
@@ -404,9 +412,17 @@ Shader "Custom/Water" {
 				
 				float3 beersLaw = exp(-waterDepth * _AbsorptionCoefficient);
 
-				float4 albedo = float4(saturate(_Ambient + diffuse + specular + fresnel), saturate(R + spec));
-				
-                return float4(lerp(albedo.rgb, backgroundColor * (1 - albedo.a) + albedo.rgb, saturate(beersLaw - R - spec)), 1.0f);
+				float3 tipColor = float3(1.0f, 1.0f, 0.9f) * height * height * height * height;
+
+				float4 albedo = float4(saturate(_Ambient + diffuse + specular + fresnel + tipColor), saturate(1 - R + spec));
+
+				float3 output = lerp(albedo.rgb, backgroundColor * (1 - albedo.a) + albedo.rgb, saturate(beersLaw - R - spec));
+
+				float viewDistance = length(_WorldSpaceCameraPos - i.worldPos);
+				float fogFactor = (0.0086f / sqrt(log(2))) * max(0.0f, viewDistance - 15.0f);
+                fogFactor = exp(-fogFactor * fogFactor);
+
+				return float4(lerp(0.61, output, saturate(fogFactor)), 1.0f);
 			}
 
 			ENDCG
