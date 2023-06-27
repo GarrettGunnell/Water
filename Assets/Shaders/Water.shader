@@ -392,7 +392,7 @@ Shader "Custom/Water" {
 
 				float3 specularReflectance = _SpecularReflectance;
 				float3 specNormal = normal;
-				specNormal.xz *= 4.0f;
+				//specNormal.xz *= 4.0f;
 				specNormal = normalize(specNormal);
 				float spec = pow(DotClamped(specNormal, halfwayDir), _Shininess) * ndotl;
                 float3 specular = _LightColor0.rgb * specularReflectance * spec;

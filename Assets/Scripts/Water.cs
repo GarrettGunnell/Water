@@ -644,6 +644,7 @@ public class Water : MonoBehaviour {
     }
 
     private void OnDrawGizmos() {
+        /*
         if (vertices == null) return;
 
         for (int i = 0; i < vertices.Length; ++i) {
@@ -652,5 +653,6 @@ public class Water : MonoBehaviour {
             Gizmos.color = Color.yellow;
             Gizmos.DrawRay(transform.TransformPoint(displacedVertices[i]), displacedNormals[i]);
         }
+        */
     }
 }

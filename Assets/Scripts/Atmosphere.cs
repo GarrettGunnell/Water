@@ -6,7 +6,19 @@ using UnityEngine;
 public class Atmosphere : MonoBehaviour {
     public Shader atmosphereShader;
 
+    [Header("Sun Settings")]
+    public Vector3 sunDirection = new Vector3(0.0f, 1.0f, 0.0f);
+    
+    [ColorUsageAttribute(false, true)]
+    public Color sunColor;
+
     [Header("Fog Settings")]
+    [Range(0.0f, 1000.0f)]
+    public float fogHeight = 500.0f;
+
+    [Range(0.01f, 5.0f)]
+    public float fogAttenuation = 1.2f;
+
     public Color fogColor;
     
     [Range(0.0f, 2.0f)]
@@ -65,8 +77,12 @@ public class Atmosphere : MonoBehaviour {
         atmosphereMaterial.SetMatrix("_CameraInvViewProjection", viewProjMatrix.inverse);
         atmosphereMaterial.SetTexture("_DepthTexture", depthTexture);
         atmosphereMaterial.SetVector("_FogColor", fogColor);
+        atmosphereMaterial.SetVector("_SunColor", sunColor);
+        atmosphereMaterial.SetVector("_SunDirection", sunDirection);
         atmosphereMaterial.SetFloat("_FogDensity", fogDensity);
         atmosphereMaterial.SetFloat("_FogOffset", fogOffset);
+        atmosphereMaterial.SetFloat("_FogHeight", fogHeight);
+        atmosphereMaterial.SetFloat("_FogAttenuation", fogAttenuation);
 
         Graphics.Blit(colorTexture, destination, atmosphereMaterial);
     }

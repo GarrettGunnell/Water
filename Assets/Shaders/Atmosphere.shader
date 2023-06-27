@@ -35,7 +35,7 @@ Shader "Hidden/Atmosphere" {
             #pragma fragment fp
 
             float _FogDensity, _FogOffset;
-            float3 _FogColor;
+            float3 _FogColor, _SunColor;
 
             float4x4 _CameraInvViewProjection;
 
@@ -45,14 +45,18 @@ Shader "Hidden/Atmosphere" {
 				return hpositionWS.xyz / hpositionWS.w;
 			}
 
+            float _FogHeight, _FogAttenuation;
+            float3 _SunDirection;
+
+
             float4 fp(v2f i) : SV_Target {
                 float4 col = tex2D(_MainTex, i.uv);
 
                 float depth = SAMPLE_DEPTH_TEXTURE(_DepthTexture, i.uv);
 				float3 worldPos = ComputeWorldSpacePosition(i.uv, depth);
 
-                float height = min(500.0f, worldPos.y) / 500.0f;
-                height = pow(saturate(height), 1.0f / 1.2f);
+                float height = min(_FogHeight, worldPos.y) / _FogHeight;
+                height = pow(saturate(height), 1.0f / _FogAttenuation);
 
                 depth = Linear01Depth(depth);
                 float viewDistance = depth * _ProjectionParams.z;
@@ -60,8 +64,8 @@ Shader "Hidden/Atmosphere" {
                 float fogFactor = (_FogDensity / sqrt(log(2))) * max(0.0f, viewDistance - _FogOffset);
                 fogFactor = exp2(-fogFactor * fogFactor);
 
-                float3 sunDir = -normalize(float3(1.15f, 0.5f, 1.0f));
-                float sun = pow(max(0.0f, dot(normalize(_WorldSpaceCameraPos - worldPos), sunDir)), 1000.0f) * 1.5f;
+                float3 sunDir = normalize(_SunDirection);
+                float3 sun = _SunColor * pow(max(0.0f, dot(normalize(_WorldSpaceCameraPos - worldPos), sunDir)), 1000.0f) * 1.5f;
 
                 float3 output = lerp(_FogColor, col.rgb, saturate(height + fogFactor));
 
