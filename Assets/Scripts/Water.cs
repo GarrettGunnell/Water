@@ -9,6 +9,8 @@ using UnityEngine.Rendering;
 public class Water : MonoBehaviour {
     public Shader waterShader;
 
+    public Atmosphere atmosphere;
+
     public int planeLength = 10;
     public int quadRes = 10;
 
@@ -245,11 +247,18 @@ public class Water : MonoBehaviour {
     public Color specularReflectance;
 
     public float shininess;
+    public float specularNormalStrength = 1;
 
     [ColorUsageAttribute(false, true)]
     public Color fresnelColor;
 
     public float fresnelBias, fresnelStrength, fresnelShininess;
+    public float fresnelNormalStrength = 1;
+
+    [ColorUsageAttribute(false, true)]
+    public Color tipColor;
+    public float tipAttenuation;
+
     public float absorptionCoefficient;
 
     public void ToggleJesus() {
@@ -505,13 +514,20 @@ public class Water : MonoBehaviour {
         waterMaterial.SetVector("_Ambient", ambient);
         waterMaterial.SetVector("_DiffuseReflectance", diffuseReflectance);
         waterMaterial.SetVector("_SpecularReflectance", specularReflectance);
+        waterMaterial.SetVector("_TipColor", tipColor);
         waterMaterial.SetVector("_FresnelColor", fresnelColor);
         waterMaterial.SetFloat("_Shininess", shininess * 100);
         waterMaterial.SetFloat("_FresnelBias", fresnelBias);
         waterMaterial.SetFloat("_FresnelStrength", fresnelStrength);
         waterMaterial.SetFloat("_FresnelShininess", fresnelShininess);
+        waterMaterial.SetFloat("_TipAttenuation", tipAttenuation);
         waterMaterial.SetFloat("_AbsorptionCoefficient", absorptionCoefficient);
+        waterMaterial.SetFloat("_FresnelNormalStrength", fresnelNormalStrength);
+        waterMaterial.SetFloat("_SpecularNormalStrength", specularNormalStrength);
         waterMaterial.SetInt("_WaveCount", waveCount);
+        if (atmosphere != null) {
+            waterMaterial.SetVector("_SunDirection", atmosphere.GetSunDirection());
+        }
 
         Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(cam.projectionMatrix, false);
         Matrix4x4 viewProjMatrix = projMatrix * cam.worldToCameraMatrix;

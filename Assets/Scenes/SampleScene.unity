@@ -155,6 +155,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   waterShader: {fileID: 4800000, guid: deb3f4534786e214ca970c02d4c381f4, type: 3}
+  atmosphere: {fileID: 0}
   planeLength: 100
   quadRes: 10
   waveFunction: 0
@@ -229,10 +230,14 @@ MonoBehaviour:
   diffuseReflectance: {r: 1, g: 1, b: 1, a: 0}
   specularReflectance: {r: 1, g: 1, b: 1, a: 0}
   shininess: 49.7
+  specularNormalStrength: 1
   fresnelColor: {r: 1, g: 1, b: 1, a: 0}
   fresnelBias: 0
   fresnelStrength: 1
   fresnelShininess: 10.6
+  fresnelNormalStrength: 1
+  tipColor: {r: 0, g: 0, b: 0, a: 0}
+  tipAttenuation: 0
   absorptionCoefficient: 1.05
 --- !u!23 &19044810
 MeshRenderer:
@@ -726,6 +731,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   atmosphereShader: {fileID: 4800000, guid: a9a6dcce863cdff4698e8d702def982d, type: 3}
+  sunDirection: {x: 0, y: 1, z: 0}
+  sunColor: {r: 0, g: 0, b: 0, a: 0}
   fogHeight: 500
   fogAttenuation: 1.2
   fogColor: {r: 0, g: 0, b: 0, a: 0}

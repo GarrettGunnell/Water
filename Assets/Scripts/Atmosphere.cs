@@ -8,7 +8,7 @@ public class Atmosphere : MonoBehaviour {
 
     [Header("Sun Settings")]
     public Vector3 sunDirection = new Vector3(0.0f, 1.0f, 0.0f);
-    
+
     [ColorUsageAttribute(false, true)]
     public Color sunColor;
 
@@ -31,6 +31,10 @@ public class Atmosphere : MonoBehaviour {
     private Material atmosphereMaterial;
     private RenderTexture colorTexture, depthTexture;
     private Vector2 currentResolution = new Vector2(0.0f, 0.0f);
+
+    public Vector3 GetSunDirection() {
+        return sunDirection;
+    }
 
     void OnEnable() {
         atmosphereMaterial = new Material(atmosphereShader);

@@ -198,9 +198,11 @@ Shader "Custom/Water" {
 				return float(n & uint(0x7fffffffU)) / float(0x7fffffff);
 			}
 
+			float3 _SunDirection;
+
 			float _VertexSeed, _VertexSeedIter, _VertexFrequency, _VertexFrequencyMult, _VertexAmplitude, _VertexAmplitudeMult, _VertexInitialSpeed, _VertexSpeedRamp, _VertexDrag, _VertexHeight, _VertexMaxPeak, _VertexPeakOffset;
 			float _FragmentSeed, _FragmentSeedIter, _FragmentFrequency, _FragmentFrequencyMult, _FragmentAmplitude, _FragmentAmplitudeMult, _FragmentInitialSpeed, _FragmentSpeedRamp, _FragmentDrag, _FragmentHeight, _FragmentMaxPeak, _FragmentPeakOffset;
-			float _NormalStrength;
+			float _NormalStrength, _FresnelNormalStrength, _SpecularNormalStrength;
 			
 			int _WaveCount;
 			int _VertexWaveCount;
@@ -288,8 +290,8 @@ Shader "Custom/Water" {
 				return normalize(cross(b, c));
 			}
 
-			float3 _Ambient, _DiffuseReflectance, _SpecularReflectance, _FresnelColor;
-			float _Shininess, _FresnelBias, _FresnelStrength, _FresnelShininess;
+			float3 _Ambient, _DiffuseReflectance, _SpecularReflectance, _FresnelColor, _TipColor;
+			float _Shininess, _FresnelBias, _FresnelStrength, _FresnelShininess, _TipAttenuation;
 			float _AbsorptionCoefficient;
 
 			float4x4 _CameraInvViewProjection;
@@ -355,7 +357,7 @@ Shader "Custom/Water" {
 			}
 
 			float4 fp(v2f i) : SV_TARGET {
-                float3 lightDir = _WorldSpaceLightPos0;
+                float3 lightDir = -normalize(_SunDirection);
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
                 float3 halfwayDir = normalize(lightDir + viewDir);
 
@@ -383,7 +385,7 @@ Shader "Custom/Water" {
 					normal = normalize(i.normal);
 				#endif
 
-				//normal = centralDifferenceNormal(i.worldPos, 0.01f);
+				// normal = centralDifferenceNormal(i.worldPos, 0.01f);
 
 				float ndotl = DotClamped(lightDir, normal);
 
@@ -392,14 +394,14 @@ Shader "Custom/Water" {
 
 				float3 specularReflectance = _SpecularReflectance;
 				float3 specNormal = normal;
-				//specNormal.xz *= 4.0f;
+				specNormal.xz *= _SpecularNormalStrength;
 				specNormal = normalize(specNormal);
 				float spec = pow(DotClamped(specNormal, halfwayDir), _Shininess) * ndotl;
                 float3 specular = _LightColor0.rgb * specularReflectance * spec;
 
 				float3 I = normalize(i.worldPos - _WorldSpaceCameraPos);
 				float3 fresnelNormal = normal;
-				fresnelNormal.xz *= 0.25f;
+				fresnelNormal.xz *= _FresnelNormalStrength;
 				fresnelNormal = normalize(fresnelNormal);
 				float R = _FresnelBias + _FresnelStrength * pow(1.0f + dot(I, fresnelNormal), _FresnelShininess);
 
@@ -415,7 +417,7 @@ Shader "Custom/Water" {
 				
 				float3 beersLaw = exp(-waterDepth * _AbsorptionCoefficient);
 
-				float3 tipColor = float3(0.3f, 0.3f, 0.4f) * height * height * height * height;
+				float3 tipColor = _TipColor * pow(height, _TipAttenuation);
 
 				float4 albedo = float4(saturate(_Ambient + diffuse + specular + fresnel + tipColor * (1 - R)), saturate(1 - R + spec));
 
