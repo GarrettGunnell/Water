@@ -252,6 +252,9 @@ public class Water : MonoBehaviour {
     [ColorUsageAttribute(false, true)]
     public Color fresnelColor;
 
+    public bool useTextureForFresnel = false;
+    public Texture environmentTexture;
+
     public float fresnelBias, fresnelStrength, fresnelShininess;
     public float fresnelNormalStrength = 1;
 
@@ -525,6 +528,12 @@ public class Water : MonoBehaviour {
         waterMaterial.SetFloat("_FresnelNormalStrength", fresnelNormalStrength);
         waterMaterial.SetFloat("_SpecularNormalStrength", specularNormalStrength);
         waterMaterial.SetInt("_WaveCount", waveCount);
+        waterMaterial.SetInt("_UseEnvironmentMap", useTextureForFresnel ? 1 : 0);
+
+        if (useTextureForFresnel) {
+            waterMaterial.SetTexture("_EnvironmentMap", environmentTexture);
+        }
+
         if (atmosphere != null) {
             waterMaterial.SetVector("_SunDirection", atmosphere.GetSunDirection());
         }

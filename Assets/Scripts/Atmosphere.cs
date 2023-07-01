@@ -36,6 +36,10 @@ public class Atmosphere : MonoBehaviour {
         return sunDirection;
     }
 
+    public RenderTexture GetRenderTarget() {
+        return colorTexture;
+    }
+
     void OnEnable() {
         atmosphereMaterial = new Material(atmosphereShader);
         cam = GetComponent<Camera>();
@@ -89,5 +93,6 @@ public class Atmosphere : MonoBehaviour {
         atmosphereMaterial.SetFloat("_FogAttenuation", fogAttenuation);
 
         Graphics.Blit(colorTexture, destination, atmosphereMaterial);
+        Graphics.Blit(destination, colorTexture);
     }
 }

@@ -51,6 +51,8 @@ public class WaterEditor : Editor {
     SerializedProperty specularReflectance;
     SerializedProperty shininess;
     SerializedProperty fresnelColor;
+    SerializedProperty environmentTexture;
+    SerializedProperty useTextureForFresnel;
     SerializedProperty fresnelBias;
     SerializedProperty fresnelShininess;
     SerializedProperty fresnelStrength;
@@ -144,6 +146,8 @@ public class WaterEditor : Editor {
         tipAttenuation = serializedObject.FindProperty("tipAttenuation");
         fresnelNormalStrength = serializedObject.FindProperty("fresnelNormalStrength");
         specularNormalStrength = serializedObject.FindProperty("specularNormalStrength");
+        useTextureForFresnel = serializedObject.FindProperty("useTextureForFresnel");
+        environmentTexture = serializedObject.FindProperty("environmentTexture");
     }
 
     public override void OnInspectorGUI() {
@@ -318,6 +322,8 @@ public class WaterEditor : Editor {
         EditorGUILayout.Slider(shininess, 0.0f, 100.0f, new GUIContent("Shininess"));
         EditorGUILayout.Slider(specularNormalStrength, 0.0f, 5.0f, new GUIContent("Specular Normal Strength"));
         EditorGUILayout.PropertyField(fresnelColor);
+        EditorGUILayout.PropertyField(environmentTexture);
+        EditorGUILayout.PropertyField(useTextureForFresnel);
         EditorGUILayout.Slider(fresnelBias, 0.0f, 1.0f, new GUIContent("Fresnel Bias"));
         EditorGUILayout.Slider(fresnelStrength, 0.0f, 1.0f, new GUIContent("Fresnel Strength"));
         EditorGUILayout.Slider(fresnelShininess, 0.0f, 20.0f, new GUIContent("Fresnel Shininess"));

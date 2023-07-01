@@ -208,6 +208,9 @@ Shader "Custom/Water" {
 			int _VertexWaveCount;
 			int _FragmentWaveCount;
 
+			samplerCUBE _EnvironmentMap;
+			int _UseEnvironmentMap;
+
 			float3 vertexFBM(float3 v) {
 				float f = _VertexFrequency;
 				float a = _VertexAmplitude;
@@ -408,6 +411,11 @@ Shader "Custom/Water" {
 				float3 fresnel = _FresnelColor * R;
 
 				float2 uv = i.pos.xy / _ScreenParams.xy;
+				
+				if (_UseEnvironmentMap) {
+					float3 skyCol = texCUBE(_EnvironmentMap, reflect(-viewDir, fresnelNormal)).rgb;
+					fresnel = skyCol * R;
+				}
 
 				float4 backgroundColor = tex2D(_WaterBackground, uv);
 
@@ -419,7 +427,7 @@ Shader "Custom/Water" {
 
 				float3 tipColor = _TipColor * pow(height, _TipAttenuation);
 
-				float4 albedo = float4(saturate(_Ambient + diffuse + specular + fresnel + tipColor * (1 - R)), saturate(1 - R + spec));
+				float4 albedo = float4((_Ambient + diffuse + specular + fresnel + tipColor), saturate(1 - R + spec));
 
 				float3 output = lerp(albedo.rgb, backgroundColor * (1 - albedo.a) + albedo.rgb, saturate(beersLaw - R - spec));
 

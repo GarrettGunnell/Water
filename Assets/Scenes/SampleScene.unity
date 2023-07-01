@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: c82a334cf5a5e47978749c210cee72a7, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.18028378, g: 0.22571412, b: 0.30692285, a: 1}
+  m_IndirectSpecularColor: {r: 0.015031584, g: 0.009001274, b: 0.0139744785, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -155,7 +155,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   waterShader: {fileID: 4800000, guid: deb3f4534786e214ca970c02d4c381f4, type: 3}
-  atmosphere: {fileID: 0}
+  atmosphere: {fileID: 963194230}
   planeLength: 100
   quadRes: 10
   waveFunction: 0
@@ -232,6 +232,8 @@ MonoBehaviour:
   shininess: 49.7
   specularNormalStrength: 1
   fresnelColor: {r: 1, g: 1, b: 1, a: 0}
+  useTextureForFresnel: 0
+  environmentTexture: {fileID: 0}
   fresnelBias: 0
   fresnelStrength: 1
   fresnelShininess: 10.6
@@ -604,6 +606,7 @@ GameObject:
   - component: {fileID: 963194227}
   - component: {fileID: 963194226}
   - component: {fileID: 963194229}
+  - component: {fileID: 963194231}
   - component: {fileID: 963194230}
   m_Layer: 0
   m_Name: Main Camera
@@ -629,7 +632,7 @@ Camera:
   m_GameObject: {fileID: 963194225}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 2
+  m_ClearFlags: 1
   m_BackGroundColor: {r: 0.023529414, g: 0.41960788, b: 0.82745105, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
@@ -731,13 +734,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   atmosphereShader: {fileID: 4800000, guid: a9a6dcce863cdff4698e8d702def982d, type: 3}
-  sunDirection: {x: 0, y: 1, z: 0}
-  sunColor: {r: 0, g: 0, b: 0, a: 0}
+  sunDirection: {x: 0, y: -1, z: 0.5}
+  sunColor: {r: 1, g: 1, b: 1, a: 0}
   fogHeight: 500
   fogAttenuation: 1.2
   fogColor: {r: 0, g: 0, b: 0, a: 0}
   fogDensity: 0
   fogOffset: 0
+--- !u!114 &963194231
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 963194225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e446a7d91cb1e1f4e9d2c57b7128a36d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  atmosphere: {fileID: 963194230}
+  bloomShader: {fileID: 4800000, guid: afff8c329837aa7489937abc01272732, type: 3}
+  threshold: 1
+  softThreshold: 0.5
+  downSamples: 1
+  downSampleDelta: 1
+  upSampleDelta: 0.5
+  bloomIntensity: 1
 --- !u!1 &972049850
 GameObject:
   m_ObjectHideFlags: 0
@@ -1028,4 +1051,52 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 3
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1955012041
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1955012043}
+  - component: {fileID: 1955012042}
+  m_Layer: 0
+  m_Name: Stars
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1955012042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1955012041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c65cb3506824184ea6d597c10a79f4e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  starDensity: 40000
+  radius: 100
+  starMaterial: {fileID: 2100000, guid: ac85497067e67434f84d338668ae70c8, type: 2}
+  starMesh: {fileID: 4068373912626513877, guid: af8c6912937c4c8468d4f72ced9b1b34, type: 3}
+--- !u!4 &1955012043
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1955012041}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 8
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
