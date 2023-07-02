@@ -68,7 +68,7 @@ Shader "Hidden/Atmosphere" {
                 float3 sun = _SunColor * pow(max(0.0f, dot(normalize(_WorldSpaceCameraPos - worldPos), sunDir)), 4000.0f);
 
                 float3 output = lerp(_FogColor, col.rgb, saturate(height + fogFactor));
-
+                
                 return float4(output + sun, 1.0f);
             }
 

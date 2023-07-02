@@ -372,7 +372,7 @@ Shader "Custom/Water" {
 				#ifdef USE_FBM
 					float3 fbm = fragmentFBM(i.worldPos);
 					height = fbm.x;
-					normal.xy = fbm.yz * _NormalStrength;
+					normal.xy = fbm.yz;
 				#else
 				for (int wi = 0; wi < _WaveCount; ++wi) {
 					normal += CalculateNormal(i.worldPos, _Waves[wi]);
@@ -389,11 +389,29 @@ Shader "Custom/Water" {
 				#endif
 
 				// normal = centralDifferenceNormal(i.worldPos, 0.01f);
+				normal.xz *= _NormalStrength;
+				normal = normalize(normal);
 
 				float ndotl = DotClamped(lightDir, normal);
 
 				float3 diffuseReflectance = _DiffuseReflectance / PI;
                 float3 diffuse = _LightColor0.rgb * ndotl * diffuseReflectance;
+
+				// Schlick Fresnel
+				float3 fresnelNormal = normal;
+				fresnelNormal.xz *= _FresnelNormalStrength;
+				float base = 1 - dot(viewDir, fresnelNormal);
+				float exponential = pow(base, _FresnelShininess);
+				float R = exponential + _FresnelBias * (1.0f - exponential);
+				R *= _FresnelStrength;
+				
+				float3 fresnel = _FresnelColor * R;
+
+				if (_UseEnvironmentMap) {
+					float3 skyCol = texCUBE(_EnvironmentMap, reflect(-viewDir, normal)).rgb;
+					fresnel = skyCol * R;
+				}
+
 
 				float3 specularReflectance = _SpecularReflectance;
 				float3 specNormal = normal;
@@ -402,34 +420,18 @@ Shader "Custom/Water" {
 				float spec = pow(DotClamped(specNormal, halfwayDir), _Shininess) * ndotl;
                 float3 specular = _LightColor0.rgb * specularReflectance * spec;
 
-				float3 I = normalize(i.worldPos - _WorldSpaceCameraPos);
-				float3 fresnelNormal = normal;
-				fresnelNormal.xz *= _FresnelNormalStrength;
-				fresnelNormal = normalize(fresnelNormal);
-				float R = _FresnelBias + _FresnelStrength * pow(1.0f + dot(I, fresnelNormal), _FresnelShininess);
+				// Schlick Fresnel but again for specular
+				base = 1 - dot(viewDir, fresnelNormal);
+				exponential = pow(base, _FresnelShininess);
+				R = exponential + _FresnelBias * (1.0f - exponential);
 
-				float3 fresnel = _FresnelColor * R;
 
 				float2 uv = i.pos.xy / _ScreenParams.xy;
-				
-				if (_UseEnvironmentMap) {
-					float3 skyCol = texCUBE(_EnvironmentMap, reflect(-viewDir, fresnelNormal)).rgb;
-					fresnel = skyCol * R;
-				}
-
-				float4 backgroundColor = tex2D(_WaterBackground, uv);
-
-				float3 depthPos = ComputeWorldSpacePosition(uv, (SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv)));
-
-				float waterDepth = length(depthPos - i.worldPos);
-				
-				float3 beersLaw = exp(-waterDepth * _AbsorptionCoefficient);
 
 				float3 tipColor = _TipColor * pow(height, _TipAttenuation);
 
-				float4 albedo = float4((_Ambient + diffuse + specular + fresnel + tipColor), saturate(1 - R + spec));
+				float3 output = _Ambient + diffuse + specular + fresnel + tipColor;
 
-				float3 output = lerp(albedo.rgb, backgroundColor * (1 - albedo.a) + albedo.rgb, saturate(beersLaw - R - spec));
 
 				return float4(output, 1.0f);
 			}
