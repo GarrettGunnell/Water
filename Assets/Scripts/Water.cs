@@ -192,7 +192,7 @@ public class Water : MonoBehaviour {
     public bool usingPixelShaderNormals = true;
     public bool usingCircularWaves = false;
     public bool letJesusTakeTheWheel = true;
-    public bool usingFBM = false;
+    public bool usingFBM = true;
 
     // Procedural Settings
     public int waveCount = 4;

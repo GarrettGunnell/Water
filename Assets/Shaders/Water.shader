@@ -6,12 +6,8 @@ Shader "Custom/Water" {
 
 	SubShader {
 		Tags {
-			"RenderType" = "Opaque"
 			"LightMode" = "ForwardBase"
-			"Queue" = "Transparent"
 		}
-
-		GrabPass { "_WaterBackground" }
 
 		Pass {
 
