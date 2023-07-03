@@ -10,6 +10,7 @@ Shader "Hidden/Atmosphere" {
         #include "UnityStandardBRDF.cginc"
 
         sampler2D _MainTex, _DepthTexture;
+        float4 _MainTex_TexelSize;
 
         struct VertexData {
             float4 vertex : POSITION;
@@ -45,15 +46,45 @@ Shader "Hidden/Atmosphere" {
 				return hpositionWS.xyz / hpositionWS.w;
 			}
 
-            float _FogHeight, _FogAttenuation;
-            float3 _SunDirection;
+            float _FogHeight, _FogAttenuation, _SkyboxSpeed;
+            float3 _SunDirection, _SkyboxDirection;
+
+            SamplerState linear_repeat_sampler;
+			samplerCUBE _SkyboxTex;
+
+            float4 flowUVW(float3 dir, float3 curl, float t, bool flowB) {
+                float phaseOffset = flowB ? 0.5f : 0.0f;
+                float progress = t + phaseOffset - floor(t + phaseOffset);
+                float3 offset = curl * progress;
+
+                float4 uvw = float4(dir, 0.0f);
+                uvw.xz -= offset.xy;
+                uvw.w = 1 - abs(1.0f - 2.0f * progress);
+
+                return uvw;
+            }
 
 
             float4 fp(v2f i) : SV_Target {
                 float4 col = tex2D(_MainTex, i.uv);
-
                 float depth = SAMPLE_DEPTH_TEXTURE(_DepthTexture, i.uv);
 				float3 worldPos = ComputeWorldSpacePosition(i.uv, depth);
+                float3 viewDir = normalize(_WorldSpaceCameraPos - worldPos);
+
+                float3 curl = _SkyboxDirection;
+
+                float3 uvw = -viewDir;
+                float t = _Time.y * _SkyboxSpeed;
+
+                float4 uvw1 = flowUVW(-viewDir, curl, t, false);
+                float4 uvw2 = flowUVW(-viewDir, curl, t, true);
+
+                float3 sky = texCUBE(_SkyboxTex, uvw1.xyz).rgb * uvw1.w;
+                float3 sky2 = texCUBE(_SkyboxTex, uvw2.xyz).rgb * uvw2.w;
+
+                sky = (sky + sky2);
+
+                if (depth == 0) col.rgb = sky;
 
                 float height = min(_FogHeight, worldPos.y) / _FogHeight;
                 height = pow(saturate(height), 1.0f / _FogAttenuation);
@@ -65,7 +96,7 @@ Shader "Hidden/Atmosphere" {
                 fogFactor = exp2(-fogFactor * fogFactor);
 
                 float3 sunDir = normalize(_SunDirection);
-                float3 sun = _SunColor * pow(max(0.0f, dot(normalize(_WorldSpaceCameraPos - worldPos), sunDir)), 4000.0f);
+                float3 sun = _SunColor * pow(max(0.0f, dot(viewDir, sunDir)), 4000.0f);
 
                 float3 output = lerp(_FogColor, col.rgb, saturate(height + fogFactor));
                 

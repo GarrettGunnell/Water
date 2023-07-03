@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.015031584, g: 0.009001274, b: 0.0139744785, a: 1}
+  m_IndirectSpecularColor: {r: 0.015100778, g: 0.009047295, b: 0.014053538, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -141,7 +141,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &19044809
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -189,7 +189,7 @@ MonoBehaviour:
   usingPixelShaderNormals: 1
   usingCircularWaves: 0
   letJesusTakeTheWheel: 1
-  usingFBM: 0
+  usingFBM: 1
   waveCount: 4
   medianWavelength: 1
   wavelengthRange: 1
@@ -229,18 +229,18 @@ MonoBehaviour:
   ambient: {r: 0, g: 0, b: 0, a: 0}
   diffuseReflectance: {r: 1, g: 1, b: 1, a: 0}
   specularReflectance: {r: 1, g: 1, b: 1, a: 0}
-  shininess: 49.7
+  shininess: 0
   specularNormalStrength: 1
   fresnelColor: {r: 1, g: 1, b: 1, a: 0}
   useTextureForFresnel: 0
   environmentTexture: {fileID: 0}
   fresnelBias: 0
-  fresnelStrength: 1
-  fresnelShininess: 10.6
+  fresnelStrength: 0
+  fresnelShininess: 0
   fresnelNormalStrength: 1
   tipColor: {r: 0, g: 0, b: 0, a: 0}
   tipAttenuation: 0
-  absorptionCoefficient: 1.05
+  absorptionCoefficient: 0
 --- !u!23 &19044810
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -734,6 +734,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   atmosphereShader: {fileID: 4800000, guid: a9a6dcce863cdff4698e8d702def982d, type: 3}
+  debugNoise: 0
+  debugCurlNoise: 0
+  skyboxTex: {fileID: 8900000, guid: 8a293ce833d584fc98516e0e74f495a4, type: 3}
+  skyboxDirection: {x: 0, y: -1, z: 0}
+  skyboxSpeed: 0.05
+  updateNoise: 1
+  cellSize: 1
+  period: 4
   sunDirection: {x: 0, y: -1, z: 0.5}
   sunColor: {r: 1, g: 1, b: 1, a: 0}
   fogHeight: 500
@@ -748,7 +756,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e446a7d91cb1e1f4e9d2c57b7128a36d, type: 3}
   m_Name: 
@@ -1068,7 +1076,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1955012042
 MonoBehaviour:
   m_ObjectHideFlags: 0

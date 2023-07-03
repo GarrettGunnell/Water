@@ -1,10 +1,27 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 [RequireComponent(typeof(Camera))]
 public class Atmosphere : MonoBehaviour {
     public Shader atmosphereShader;
+
+    public bool debugNoise = false;
+    public bool debugCurlNoise = false;
+
+    [Header("Skybox Settings")]
+    public Texture skyboxTex;
+    public Vector3 skyboxDirection = new Vector3(0.0f, -1.0f, 0.0f);
+    [Range(0.0f, 2.0f)]
+    public float skyboxSpeed = 0.1f;
+
+    [Header("Noise Settings")]
+    public bool updateNoise = true;
+    [Range(0.0f, 256.0f)]
+    public float cellSize = 1.0f;
+    [Range(0.0f, 256.0f)]
+    public float period = 1.0f;
 
     [Header("Sun Settings")]
     public Vector3 sunDirection = new Vector3(0.0f, 1.0f, 0.0f);
@@ -87,10 +104,13 @@ public class Atmosphere : MonoBehaviour {
         atmosphereMaterial.SetVector("_FogColor", fogColor);
         atmosphereMaterial.SetVector("_SunColor", sunColor);
         atmosphereMaterial.SetVector("_SunDirection", sunDirection);
+        atmosphereMaterial.SetVector("_SkyboxDirection", skyboxDirection);
         atmosphereMaterial.SetFloat("_FogDensity", fogDensity);
         atmosphereMaterial.SetFloat("_FogOffset", fogOffset);
         atmosphereMaterial.SetFloat("_FogHeight", fogHeight);
         atmosphereMaterial.SetFloat("_FogAttenuation", fogAttenuation);
+        atmosphereMaterial.SetFloat("_SkyboxSpeed", skyboxSpeed);
+        atmosphereMaterial.SetTexture("_SkyboxTex", skyboxTex);
 
         Graphics.Blit(colorTexture, destination, atmosphereMaterial);
         Graphics.Blit(destination, colorTexture);
