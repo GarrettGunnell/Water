@@ -194,7 +194,7 @@ Shader "Custom/Water" {
 				return float(n & uint(0x7fffffffU)) / float(0x7fffffff);
 			}
 
-			float3 _SunDirection;
+			float3 _SunDirection, _SunColor;
 
 			float _VertexSeed, _VertexSeedIter, _VertexFrequency, _VertexFrequencyMult, _VertexAmplitude, _VertexAmplitudeMult, _VertexInitialSpeed, _VertexSpeedRamp, _VertexDrag, _VertexHeight, _VertexMaxPeak, _VertexPeakOffset;
 			float _FragmentSeed, _FragmentSeedIter, _FragmentFrequency, _FragmentFrequencyMult, _FragmentAmplitude, _FragmentAmplitudeMult, _FragmentInitialSpeed, _FragmentSpeedRamp, _FragmentDrag, _FragmentHeight, _FragmentMaxPeak, _FragmentPeakOffset;
@@ -404,8 +404,12 @@ Shader "Custom/Water" {
 				float3 fresnel = _FresnelColor * R;
 
 				if (_UseEnvironmentMap) {
-					float3 skyCol = texCUBE(_EnvironmentMap, reflect(-viewDir, normal)).rgb;
-					fresnel = skyCol * R;
+					float3 reflectedDir = reflect(-viewDir, normal);
+					float3 skyCol = texCUBE(_EnvironmentMap, reflectedDir).rgb;
+					float3 sun = _SunColor * pow(max(0.0f, DotClamped(reflectedDir, lightDir)), 400.0f);
+
+					fresnel = skyCol.rgb * R;
+					fresnel += sun * R;
 				}
 
 

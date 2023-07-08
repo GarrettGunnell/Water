@@ -53,6 +53,10 @@ public class Atmosphere : MonoBehaviour {
         return sunDirection;
     }
 
+    public Color GetSunColor() {
+        return sunColor;
+    }
+
     public RenderTexture GetRenderTarget() {
         return colorTexture;
     }

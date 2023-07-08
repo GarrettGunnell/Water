@@ -536,6 +536,7 @@ public class Water : MonoBehaviour {
 
         if (atmosphere != null) {
             waterMaterial.SetVector("_SunDirection", atmosphere.GetSunDirection());
+            waterMaterial.SetVector("_SunColor", atmosphere.GetSunColor());
         }
 
         Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(cam.projectionMatrix, false);
