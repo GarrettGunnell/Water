@@ -53,6 +53,14 @@ public class Atmosphere : MonoBehaviour {
         return sunDirection;
     }
 
+    public Vector3 GetSkyboxDirection() {
+        return skyboxDirection;
+    }
+
+    public float GetSkyboxSpeed() {
+        return skyboxSpeed;
+    }
+
     public Color GetSunColor() {
         return sunColor;
     }

@@ -71,7 +71,7 @@ Shader "Hidden/Atmosphere" {
 				float3 worldPos = ComputeWorldSpacePosition(i.uv, depth);
                 float3 viewDir = normalize(_WorldSpaceCameraPos - worldPos);
 
-                float3 curl = _SkyboxDirection;
+                float3 curl = normalize(_SkyboxDirection);
 
                 float3 uvw = -viewDir;
                 float t = _Time.y * _SkyboxSpeed;
@@ -96,7 +96,7 @@ Shader "Hidden/Atmosphere" {
                 fogFactor = exp2(-fogFactor * fogFactor);
 
                 float3 sunDir = normalize(_SunDirection);
-                float3 sun = _SunColor * pow(max(0.0f, dot(viewDir, sunDir)), 4000.0f);
+                float3 sun = _SunColor * pow(DotClamped(viewDir, sunDir), 3500.0f);
 
                 float3 output = lerp(_FogColor, col.rgb, saturate(height + fogFactor));
                 

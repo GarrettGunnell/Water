@@ -396,6 +396,7 @@ Shader "Custom/Water" {
 				// Schlick Fresnel
 				float3 fresnelNormal = normal;
 				fresnelNormal.xz *= _FresnelNormalStrength;
+				fresnelNormal = normalize(fresnelNormal);
 				float base = 1 - dot(viewDir, fresnelNormal);
 				float exponential = pow(base, _FresnelShininess);
 				float R = exponential + _FresnelBias * (1.0f - exponential);
@@ -406,7 +407,7 @@ Shader "Custom/Water" {
 				if (_UseEnvironmentMap) {
 					float3 reflectedDir = reflect(-viewDir, normal);
 					float3 skyCol = texCUBE(_EnvironmentMap, reflectedDir).rgb;
-					float3 sun = _SunColor * pow(max(0.0f, DotClamped(reflectedDir, lightDir)), 400.0f);
+					float3 sun = _SunColor * pow(max(0.0f, DotClamped(reflectedDir, lightDir)), 500.0f);
 
 					fresnel = skyCol.rgb * R;
 					fresnel += sun * R;
@@ -421,12 +422,13 @@ Shader "Custom/Water" {
                 float3 specular = _LightColor0.rgb * specularReflectance * spec;
 
 				// Schlick Fresnel but again for specular
-				base = 1 - dot(viewDir, fresnelNormal);
-				exponential = pow(base, _FresnelShininess);
+				base = 1 - DotClamped(viewDir, halfwayDir);
+				exponential = pow(base, 5.0f);
 				R = exponential + _FresnelBias * (1.0f - exponential);
 
+				specular *= R;
+				
 
-				float2 uv = i.pos.xy / _ScreenParams.xy;
 
 				float3 tipColor = _TipColor * pow(height, _TipAttenuation);
 
