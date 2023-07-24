@@ -56,7 +56,6 @@ public class WaterEditor : Editor {
     SerializedProperty fresnelBias;
     SerializedProperty fresnelShininess;
     SerializedProperty fresnelStrength;
-    SerializedProperty absorptionCoefficient;
     SerializedProperty tipColor;
     SerializedProperty tipAttenuation;
 
@@ -113,7 +112,6 @@ public class WaterEditor : Editor {
         fresnelBias = serializedObject.FindProperty("fresnelBias");
         fresnelStrength = serializedObject.FindProperty("fresnelStrength");
         fresnelShininess = serializedObject.FindProperty("fresnelShininess");
-        absorptionCoefficient = serializedObject.FindProperty("absorptionCoefficient");
         waveCount = serializedObject.FindProperty("waveCount");
         vertexSeed = serializedObject.FindProperty("vertexSeed");
         vertexSeedIter = serializedObject.FindProperty("vertexSeedIter");
@@ -330,9 +328,6 @@ public class WaterEditor : Editor {
         EditorGUILayout.Slider(fresnelNormalStrength, 0.0f, 5.0f, new GUIContent("Fresnel Normal Strength"));
         EditorGUILayout.PropertyField(tipColor);
         EditorGUILayout.Slider(tipAttenuation, 0.0f, 5.0f, new GUIContent("Tip Attenuation"));
-
-
-        EditorGUILayout.Slider(absorptionCoefficient, 0.0f, 2.0f, new GUIContent("Absorption Coefficient"));
 
         serializedObject.ApplyModifiedProperties();
     }

@@ -262,8 +262,6 @@ public class Water : MonoBehaviour {
     public Color tipColor;
     public float tipAttenuation;
 
-    public float absorptionCoefficient;
-
     public void ToggleJesus() {
         if (!Application.isPlaying) {
             Debug.Log("Not in play mode!");
@@ -524,7 +522,6 @@ public class Water : MonoBehaviour {
         waterMaterial.SetFloat("_FresnelStrength", fresnelStrength);
         waterMaterial.SetFloat("_FresnelShininess", fresnelShininess);
         waterMaterial.SetFloat("_TipAttenuation", tipAttenuation);
-        waterMaterial.SetFloat("_AbsorptionCoefficient", absorptionCoefficient);
         waterMaterial.SetFloat("_FresnelNormalStrength", fresnelNormalStrength);
         waterMaterial.SetFloat("_SpecularNormalStrength", specularNormalStrength);
         waterMaterial.SetInt("_WaveCount", waveCount);

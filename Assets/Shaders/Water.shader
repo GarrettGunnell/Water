@@ -291,11 +291,9 @@ Shader "Custom/Water" {
 
 			float3 _Ambient, _DiffuseReflectance, _SpecularReflectance, _FresnelColor, _TipColor;
 			float _Shininess, _FresnelBias, _FresnelStrength, _FresnelShininess, _TipAttenuation;
-			float _AbsorptionCoefficient;
 
 			float4x4 _CameraInvViewProjection;
-			sampler2D _CameraDepthTexture, _WaterBackground;
-			float4 _WaterBackground_TexelSize;
+			sampler2D _CameraDepthTexture;
 
 			v2f vp(VertexData v) {
 				v2f i;

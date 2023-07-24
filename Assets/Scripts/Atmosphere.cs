@@ -7,21 +7,11 @@ using UnityEngine.Rendering;
 public class Atmosphere : MonoBehaviour {
     public Shader atmosphereShader;
 
-    public bool debugNoise = false;
-    public bool debugCurlNoise = false;
-
     [Header("Skybox Settings")]
     public Texture skyboxTex;
     public Vector3 skyboxDirection = new Vector3(0.0f, -1.0f, 0.0f);
     [Range(0.0f, 2.0f)]
     public float skyboxSpeed = 0.1f;
-
-    [Header("Noise Settings")]
-    public bool updateNoise = true;
-    [Range(0.0f, 256.0f)]
-    public float cellSize = 1.0f;
-    [Range(0.0f, 256.0f)]
-    public float period = 1.0f;
 
     [Header("Sun Settings")]
     public Vector3 sunDirection = new Vector3(0.0f, 1.0f, 0.0f);
