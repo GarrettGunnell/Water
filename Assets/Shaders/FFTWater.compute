@@ -1,0 +1,15 @@
+#pragma kernel CSMain
+
+RWTexture2D<float4> _HeightTex, _NormalTex;
+float _FrameTime;
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID) {
+    float2 d = float2(-1, 1);
+    d = normalize(d);
+    
+    _HeightTex[id.xy] = sin(dot(d, id.xy) * 0.015f + _FrameTime * 2) * 0.5f;
+
+    float2 dw = d * cos(dot(d, id.xy) * 0.015f + _FrameTime * 2) * 0.5f;
+    _NormalTex[id.xy] = float4(dw, 0, 0);
+}

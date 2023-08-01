@@ -8,6 +8,7 @@ using UnityEngine.Rendering;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class FFTWater : MonoBehaviour {
     public Shader waterShader;
+    public ComputeShader fftComputeShader;
 
     public Atmosphere atmosphere;
 
@@ -36,6 +37,7 @@ public class FFTWater : MonoBehaviour {
 
     [Range(0.0f, 10.0f)]
     public float shininess = 1.0f;
+
     [Range(0.0f, 5.0f)]
     public float specularNormalStrength = 1.0f;
 
@@ -47,18 +49,23 @@ public class FFTWater : MonoBehaviour {
 
     [Range(0.0f, 1.0f)]
     public float fresnelBias = 0.0f;
+
     [Range(0.0f, 3.0f)]
     public float fresnelStrength = 1.0f;
+
     [Range(0.0f, 20.0f)]
     public float fresnelShininess = 5.0f;
 
     [Range(0.0f, 5.0f)]
-    public float fresnelNormalStrength = 1;
+    public float fresnelNormalStrength = 1.0f;
 
     [ColorUsageAttribute(false, true)]
     public Color tipColor;
+
     [Range(0.0f, 5.0f)]
     public float tipAttenuation = 1.0f;
+
+    private RenderTexture heightTex, normalTex;
 
     private void CreateWaterPlane() {
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
@@ -119,6 +126,19 @@ public class FFTWater : MonoBehaviour {
         CreateWaterPlane();
         CreateMaterial();
         cam = GameObject.Find("Main Camera").GetComponent<Camera>();
+
+        heightTex = new RenderTexture(512, 512, 0, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
+        heightTex.enableRandomWrite = true;
+        heightTex.Create();
+
+        normalTex = new RenderTexture(512, 512, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        normalTex.enableRandomWrite = true;
+        normalTex.Create();
+
+        fftComputeShader.SetTexture(0, "_HeightTex", heightTex);
+        fftComputeShader.SetTexture(0, "_NormalTex", normalTex);
+        fftComputeShader.Dispatch(0, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
+
     }
 
     void Update() {
@@ -132,9 +152,16 @@ public class FFTWater : MonoBehaviour {
         waterMaterial.SetFloat("_FresnelStrength", fresnelStrength);
         waterMaterial.SetFloat("_FresnelShininess", fresnelShininess);
         waterMaterial.SetFloat("_TipAttenuation", tipAttenuation);
+        waterMaterial.SetFloat("_NormalStrength", normalStrength);
         waterMaterial.SetFloat("_FresnelNormalStrength", fresnelNormalStrength);
         waterMaterial.SetFloat("_SpecularNormalStrength", specularNormalStrength);
         waterMaterial.SetInt("_UseEnvironmentMap", useTextureForFresnel ? 1 : 0);
+        fftComputeShader.SetTexture(0, "_HeightTex", heightTex);
+        fftComputeShader.SetTexture(0, "_NormalTex", normalTex);
+        fftComputeShader.SetFloat("_FrameTime", Time.time);
+        fftComputeShader.Dispatch(0, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
+        waterMaterial.SetTexture("_HeightTex", heightTex);
+        waterMaterial.SetTexture("_NormalTex", normalTex);
 
         if (useTextureForFresnel) {
             waterMaterial.SetTexture("_EnvironmentMap", environmentTexture);
@@ -162,6 +189,8 @@ public class FFTWater : MonoBehaviour {
             vertices = null;
             normals = null;
         }
+
+        Destroy(heightTex);
     }
 
     private void OnDrawGizmos() {

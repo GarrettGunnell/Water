@@ -24,10 +24,12 @@ Shader "Custom/FFTWater" {
 			struct VertexData {
 				float4 vertex : POSITION;
 				float3 normal : NORMAL;
+                float2 uv : TEXCOORD0;
 			};
 
 			struct v2f {
 				float4 pos : SV_POSITION;
+                float2 uv : TEXCOORD0;
 				float3 normal : TEXCOORD1;
 				float3 worldPos : TEXCOORD2;
 			};
@@ -54,12 +56,18 @@ Shader "Custom/FFTWater" {
 
 			float4x4 _CameraInvViewProjection;
 			sampler2D _CameraDepthTexture;
+            Texture2D _HeightTex;
+            SamplerState linear_repeat_sampler;
+            sampler2D _NormalTex;
+
+            #define TILE 0.99
 
 			v2f vp(VertexData v) {
 				v2f i;
                 i.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 i.normal = normalize(UnityObjectToWorldNormal(v.normal));
-                i.pos = UnityObjectToClipPos(v.vertex);
+                i.pos = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * TILE, 0).r, 0.0f));
+                i.uv = v.uv;
 				
 				return i;
 			}
@@ -77,6 +85,8 @@ Shader "Custom/FFTWater" {
 
                 float height = 0.0f;
 				float3 normal = normalize(i.normal);
+                float2 n = tex2D(_NormalTex, i.uv).rg;
+                normal = normalize(UnityObjectToWorldNormal(normalize(float3(-n.x, 1.0f, -n.y))));
 
 				// normal = centralDifferenceNormal(i.worldPos, 0.01f);
 				normal.xz *= _NormalStrength;
@@ -97,7 +107,7 @@ Shader "Custom/FFTWater" {
 				R *= _FresnelStrength;
 				
 				float3 fresnel = _FresnelColor * R;
-
+                
 				if (_UseEnvironmentMap) {
 					float3 reflectedDir = reflect(-viewDir, normal);
 					float3 skyCol = texCUBE(_EnvironmentMap, reflectedDir).rgb;
@@ -128,7 +138,7 @@ Shader "Custom/FFTWater" {
 
 				float3 output = _Ambient + diffuse + specular + fresnel + tipColor;
 
-
+                //return _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE).r * 0.5f + 0.5f;
 				return float4(output, 1.0f);
 			}
 
