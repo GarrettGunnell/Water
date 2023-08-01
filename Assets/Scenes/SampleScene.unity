@@ -135,6 +135,7 @@ GameObject:
   - component: {fileID: 19044811}
   - component: {fileID: 19044810}
   - component: {fileID: 19044809}
+  - component: {fileID: 19044813}
   m_Layer: 0
   m_Name: Water
   m_TagString: Untagged
@@ -149,7 +150,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 19044808}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 96357dc15bb8e4f478c2c846f33be7c4, type: 3}
   m_Name: 
@@ -240,7 +241,6 @@ MonoBehaviour:
   fresnelNormalStrength: 1
   tipColor: {r: 0, g: 0, b: 0, a: 0}
   tipAttenuation: 0
-  absorptionCoefficient: 0
 --- !u!23 &19044810
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -306,6 +306,37 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &19044813
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 19044808}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9386c1b16f5e5d64c8ba239dd9ea3744, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  waterShader: {fileID: 4800000, guid: 16bcf694f2309c143b77d97af3b9cc8d, type: 3}
+  atmosphere: {fileID: 963194230}
+  planeLength: 10
+  quadRes: 10
+  normalStrength: 1
+  ambient: {r: 0, g: 0, b: 0, a: 0}
+  diffuseReflectance: {r: 1, g: 1, b: 1, a: 0}
+  specularReflectance: {r: 1, g: 1, b: 1, a: 0}
+  shininess: 1
+  specularNormalStrength: 1
+  fresnelColor: {r: 0, g: 0, b: 0, a: 0}
+  useTextureForFresnel: 0
+  environmentTexture: {fileID: 0}
+  fresnelBias: 0
+  fresnelStrength: 1
+  fresnelShininess: 5
+  fresnelNormalStrength: 1
+  tipColor: {r: 0, g: 0, b: 0, a: 0}
+  tipAttenuation: 1
 --- !u!1 &320027525
 GameObject:
   m_ObjectHideFlags: 0
@@ -632,7 +663,7 @@ Camera:
   m_GameObject: {fileID: 963194225}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
+  m_ClearFlags: 2
   m_BackGroundColor: {r: 0.023529414, g: 0.41960788, b: 0.82745105, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
@@ -734,14 +765,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   atmosphereShader: {fileID: 4800000, guid: a9a6dcce863cdff4698e8d702def982d, type: 3}
-  debugNoise: 0
-  debugCurlNoise: 0
   skyboxTex: {fileID: 8900000, guid: 8a293ce833d584fc98516e0e74f495a4, type: 3}
   skyboxDirection: {x: 0, y: -1, z: 0}
   skyboxSpeed: 0.05
-  updateNoise: 1
-  cellSize: 1
-  period: 4
   sunDirection: {x: 0, y: -1, z: 0.5}
   sunColor: {r: 1, g: 1, b: 1, a: 0}
   fogHeight: 500
