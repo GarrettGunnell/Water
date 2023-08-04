@@ -57,16 +57,17 @@ Shader "Custom/FFTWater" {
 			float4x4 _CameraInvViewProjection;
 			sampler2D _CameraDepthTexture;
             Texture2D _HeightTex;
-            SamplerState linear_repeat_sampler;
+            SamplerState point_repeat_sampler;
             sampler2D _NormalTex;
 
-            #define TILE 0.99
+            #define TILE 1
 
 			v2f vp(VertexData v) {
 				v2f i;
                 i.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 i.normal = normalize(UnityObjectToWorldNormal(v.normal));
-                i.pos = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * TILE, 0).r, 0.0f));
+                //i.pos = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(point_repeat_sampler, v.uv * TILE, 0).r, 0.0f));
+                i.pos = UnityObjectToClipPos(v.vertex);
                 i.uv = v.uv;
 				
 				return i;
@@ -138,7 +139,7 @@ Shader "Custom/FFTWater" {
 
 				float3 output = _Ambient + diffuse + specular + fresnel + tipColor;
 
-                //return _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE).r * 0.5f + 0.5f;
+                return _HeightTex.Sample(point_repeat_sampler, i.uv * TILE).r;
 				return float4(output, 1.0f);
 			}
 

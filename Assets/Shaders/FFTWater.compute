@@ -1,15 +1,85 @@
 #pragma kernel CSMain
 
+#define PI 3.14159265358979323846
+
 RWTexture2D<float4> _HeightTex, _NormalTex;
 float _FrameTime;
 
+float2 ComplexMult(float2 a, float2 b) {
+    return float2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+}
+
+float2 EulerFormula(float x) {
+    return float2(cos(x), sin(x));
+}
+
+float hash(uint n) {
+    // integer hash copied from Hugo Elias
+    n = (n << 13U) ^ n;
+    n = n * (n * n * 15731U + 0x789221U) + 0x1376312589U;
+    return float(n & uint(0x7fffffffU)) / float(0x7fffffff);
+}
+
+float2 UniformToGaussian(float u1, float u2) {
+    float R = sqrt(-2.0f * log(u1));
+    float theta = 2.0f * PI * u2;
+
+    return (float2(R * cos(theta), R * sin(theta)));
+}
+
+float PhillipsSpectrum(float2 k) {
+    float kMag = length(k);
+    if (kMag < 0.001f) return 0.0f;
+
+    float A = 20.0f;
+    float V = 2.0f;
+    float L = V * V / 9.8f;
+    float2 w = normalize(float2(1.0f, 1.0f));
+    float kdotw = dot(normalize(k), w);
+
+    return A * (exp(-1.0f / ((kMag * L) * (kMag * L))) / kMag * kMag * kMag * kMag) * kdotw * kdotw;
+}
+
+float2 ComplexWave(float2 k, float2 rand) {
+    return (1.0f / sqrt(2.0f)) * rand * sqrt(PhillipsSpectrum(k));
+}
+
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID) {
+    uint seed = id.x + 512 * id.y + 512;
+    
+    float LengthScale = 1024.0f;
+
+    float N = 512;
+    float halfN = N / 2.0f;
+
+    float n = id.x - N / 2.0f;
+    float m = id.y - N / 2.0f;
+
+
+    float2 K = float2(n, m) * 2.0f * PI / LengthScale;
+
+    float P = PhillipsSpectrum(K);
+
+    float4 uniformRandSamples = float4(hash(seed), hash(seed * seed), hash(seed * seed * seed), hash(seed * seed * seed * 0.25));
+    float2 gauss1 = UniformToGaussian(uniformRandSamples.x, uniformRandSamples.y);
+    float2 gauss2 = UniformToGaussian(uniformRandSamples.z, uniformRandSamples.w);
+
+    float2 h1 = ComplexWave(K, float2(gauss1.x, gauss2.y));
+    float2 h2 = ComplexWave(-K, float2(gauss1.y, gauss2.x));
+
+    float w_0 = 2.0f * PI / 200.0f;
+    float dispersion = floor(sqrt(9.8f * length(K)) / w_0) * w_0 * _FrameTime;
+
+    float2 h = ComplexMult(h1, EulerFormula(dispersion)) + ComplexMult(h2, EulerFormula(-dispersion));
+
+    _HeightTex[id.xy] = h.x;
+
     float2 d = float2(-1, 1);
     d = normalize(d);
     
-    _HeightTex[id.xy] = sin(dot(d, id.xy) * 0.015f + _FrameTime * 2) * 0.5f;
+    //_HeightTex[id.xy] = sin(dot(d, id.xy) * 0.015f + _FrameTime * 2) * 0.5f;
 
     float2 dw = d * cos(dot(d, id.xy) * 0.015f + _FrameTime * 2) * 0.5f;
-    _NormalTex[id.xy] = float4(dw, 0, 0);
+    _NormalTex[id.xy] = float4(h, 0, 0);
 }
