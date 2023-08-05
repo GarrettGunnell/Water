@@ -66,6 +66,7 @@ public class FFTWater : MonoBehaviour {
     public float tipAttenuation = 1.0f;
 
     private RenderTexture heightTex, normalTex, initialSpectrumTex, progressedSpectrumTex;
+    private int N, length, threadGroupsX, threadGroupsY;
 
     private void CreateWaterPlane() {
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
@@ -127,26 +128,33 @@ public class FFTWater : MonoBehaviour {
         CreateMaterial();
         cam = GameObject.Find("Main Camera").GetComponent<Camera>();
 
-        initialSpectrumTex = new RenderTexture(512, 512, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        N = 256;
+        length = 512;
+        threadGroupsX = Mathf.CeilToInt(N / 8.0f);
+        threadGroupsY = Mathf.CeilToInt(N / 8.0f);
+        fftComputeShader.SetInt("_N", N);
+        fftComputeShader.SetInt("_LengthScale", length);
+
+        initialSpectrumTex = new RenderTexture(N, N, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
         initialSpectrumTex.enableRandomWrite = true;
         initialSpectrumTex.Create();
 
-        progressedSpectrumTex = new RenderTexture(512, 512, 0, RenderTextureFormat.RGHalf, RenderTextureReadWrite.Linear);
+        progressedSpectrumTex = new RenderTexture(N, N, 0, RenderTextureFormat.RGHalf, RenderTextureReadWrite.Linear);
         progressedSpectrumTex.enableRandomWrite = true;
         progressedSpectrumTex.Create();
 
-        heightTex = new RenderTexture(512, 512, 0, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
+        heightTex = new RenderTexture(N, N, 0, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
         heightTex.enableRandomWrite = true;
         heightTex.Create();
 
-        normalTex = new RenderTexture(512, 512, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        normalTex = new RenderTexture(N, N, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
         normalTex.enableRandomWrite = true;
         normalTex.Create();
 
         fftComputeShader.SetTexture(0, "_HeightTex", heightTex);
         fftComputeShader.SetTexture(0, "_NormalTex", normalTex);
         fftComputeShader.SetTexture(0, "_InitialSpectrumTex", initialSpectrumTex);
-        fftComputeShader.Dispatch(0, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
+        fftComputeShader.Dispatch(0, threadGroupsX, threadGroupsY, 1);
 
     }
 
@@ -166,15 +174,17 @@ public class FFTWater : MonoBehaviour {
         waterMaterial.SetFloat("_SpecularNormalStrength", specularNormalStrength);
         waterMaterial.SetInt("_UseEnvironmentMap", useTextureForFresnel ? 1 : 0);
 
-        fftComputeShader.SetTexture(0, "_HeightTex", heightTex);
-        fftComputeShader.SetTexture(0, "_NormalTex", normalTex);
-        fftComputeShader.SetTexture(0, "_InitialSpectrumTex", initialSpectrumTex);
         fftComputeShader.SetFloat("_FrameTime", Time.time);
-        //fftComputeShader.Dispatch(0, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
+        fftComputeShader.SetInt("_N", N);
+        fftComputeShader.SetInt("_LengthScale", length);
 
         fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);
         fftComputeShader.SetTexture(1, "_ProgressedSpectrumTex", progressedSpectrumTex);
-        fftComputeShader.Dispatch(1, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
+        fftComputeShader.Dispatch(1, threadGroupsX, threadGroupsY, 1);
+
+        fftComputeShader.SetTexture(2, "_HeightTex", heightTex);
+        fftComputeShader.SetTexture(2, "_ProgressedSpectrumTex", progressedSpectrumTex);
+        fftComputeShader.Dispatch(2, threadGroupsX, threadGroupsY, 1);
 
         waterMaterial.SetTexture("_HeightTex", heightTex);
         waterMaterial.SetTexture("_NormalTex", normalTex);
