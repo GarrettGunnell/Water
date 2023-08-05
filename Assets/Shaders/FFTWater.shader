@@ -56,7 +56,7 @@ Shader "Custom/FFTWater" {
 
 			float4x4 _CameraInvViewProjection;
 			sampler2D _CameraDepthTexture;
-            Texture2D _HeightTex;
+            Texture2D _HeightTex, _SpectrumTex;
             SamplerState point_repeat_sampler;
             sampler2D _NormalTex;
 
@@ -138,8 +138,8 @@ Shader "Custom/FFTWater" {
 				float3 tipColor = _TipColor * pow(height, _TipAttenuation);
 
 				float3 output = _Ambient + diffuse + specular + fresnel + tipColor;
-
-                return _HeightTex.Sample(point_repeat_sampler, i.uv * TILE).r;
+				
+                return _SpectrumTex.Sample(point_repeat_sampler, i.uv * TILE);
 				return float4(output, 1.0f);
 			}
 

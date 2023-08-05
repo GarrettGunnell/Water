@@ -65,7 +65,7 @@ public class FFTWater : MonoBehaviour {
     [Range(0.0f, 5.0f)]
     public float tipAttenuation = 1.0f;
 
-    private RenderTexture heightTex, normalTex;
+    private RenderTexture heightTex, normalTex, initialSpectrumTex, progressedSpectrumTex;
 
     private void CreateWaterPlane() {
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
@@ -127,6 +127,14 @@ public class FFTWater : MonoBehaviour {
         CreateMaterial();
         cam = GameObject.Find("Main Camera").GetComponent<Camera>();
 
+        initialSpectrumTex = new RenderTexture(512, 512, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        initialSpectrumTex.enableRandomWrite = true;
+        initialSpectrumTex.Create();
+
+        progressedSpectrumTex = new RenderTexture(512, 512, 0, RenderTextureFormat.RGHalf, RenderTextureReadWrite.Linear);
+        progressedSpectrumTex.enableRandomWrite = true;
+        progressedSpectrumTex.Create();
+
         heightTex = new RenderTexture(512, 512, 0, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
         heightTex.enableRandomWrite = true;
         heightTex.Create();
@@ -137,6 +145,7 @@ public class FFTWater : MonoBehaviour {
 
         fftComputeShader.SetTexture(0, "_HeightTex", heightTex);
         fftComputeShader.SetTexture(0, "_NormalTex", normalTex);
+        fftComputeShader.SetTexture(0, "_InitialSpectrumTex", initialSpectrumTex);
         fftComputeShader.Dispatch(0, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
 
     }
@@ -156,12 +165,20 @@ public class FFTWater : MonoBehaviour {
         waterMaterial.SetFloat("_FresnelNormalStrength", fresnelNormalStrength);
         waterMaterial.SetFloat("_SpecularNormalStrength", specularNormalStrength);
         waterMaterial.SetInt("_UseEnvironmentMap", useTextureForFresnel ? 1 : 0);
+
         fftComputeShader.SetTexture(0, "_HeightTex", heightTex);
         fftComputeShader.SetTexture(0, "_NormalTex", normalTex);
+        fftComputeShader.SetTexture(0, "_InitialSpectrumTex", initialSpectrumTex);
         fftComputeShader.SetFloat("_FrameTime", Time.time);
-        fftComputeShader.Dispatch(0, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
+        //fftComputeShader.Dispatch(0, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
+
+        fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);
+        fftComputeShader.SetTexture(1, "_ProgressedSpectrumTex", progressedSpectrumTex);
+        fftComputeShader.Dispatch(1, Mathf.CeilToInt(Screen.width / 8.0f), Mathf.CeilToInt(Screen.height / 8.0f), 1);
+
         waterMaterial.SetTexture("_HeightTex", heightTex);
         waterMaterial.SetTexture("_NormalTex", normalTex);
+        waterMaterial.SetTexture("_SpectrumTex", progressedSpectrumTex);
 
         if (useTextureForFresnel) {
             waterMaterial.SetTexture("_EnvironmentMap", environmentTexture);
@@ -191,6 +208,9 @@ public class FFTWater : MonoBehaviour {
         }
 
         Destroy(heightTex);
+        Destroy(normalTex);
+        Destroy(initialSpectrumTex);
+        Destroy(progressedSpectrumTex);
     }
 
     private void OnDrawGizmos() {
