@@ -36,18 +36,27 @@ float PhillipsSpectrum(float2 k) {
     float kMag = length(k);
     if (kMag < 0.0001f) return 0.0f;
 
-    float A = 0.2f;
-    float V = 1.28f;
-    float L = V * V / 9.8f;
-    float l = 0.25f;
-    float2 w = normalize(float2(-1.0f, 1.0f));
-    float kdotw = dot(normalize(k), w);
+    
+    float A = 0.000000075f;
+    float2 w = float2(-30.5f, 1.0f);
 
-    return A * (exp(-1.0f / ((kMag * L) * (kMag * L))) / kMag * kMag * kMag * kMag) * kdotw * kdotw * exp(-k * k * l * l);
+    float k2 = kMag * kMag;
+    float k4 = k2 * k2;
+    float kdotw = dot(normalize(k), normalize(w));
+    float kdotw2 = kdotw * kdotw;
+
+    float2 wMag = length(w);
+    float L = wMag * wMag / 9.81f;
+    float L2 = L * L;
+
+    float damping = 0.00001f;
+    float l2 = L2 * damping * damping;
+
+    return A * exp(-1.0f / (k2 * L2)) / k4 * kdotw2 * exp(-k2 * l2);
 }
 
 float2 SampleSpectrum(float2 k, float2 rand) {
-    return (1.0f / sqrt(2.0f)) * rand * sqrt(PhillipsSpectrum(k));
+    return rand * sqrt(PhillipsSpectrum(k) / 2.0f);
 }
 
 [numthreads(8,8,1)]
@@ -65,9 +74,6 @@ void CS_InitializeSpectrum(uint3 id : SV_DISPATCHTHREADID) {
     float2 gauss1 = UniformToGaussian(uniformRandSamples.x, uniformRandSamples.y);
     float2 gauss2 = UniformToGaussian(uniformRandSamples.z, uniformRandSamples.w);
 
-    float w_0 = 2.0f * PI / 200.0f;
-    float dispersion = floor(sqrt(9.8f * length(K)) / w_0) * w_0;
-
     float2 h0 = SampleSpectrum(K, float2(gauss1.x, gauss2.y));
     float2 h0conj = SampleSpectrum(-K, float2(gauss1.y, gauss2.x));
 
@@ -77,8 +83,10 @@ void CS_InitializeSpectrum(uint3 id : SV_DISPATCHTHREADID) {
 [numthreads(8,8,1)]
 void CS_UpdateSpectrum(uint3 id : SV_DISPATCHTHREADID) {
     float4 initialSignal = _InitialSpectrumTex[id.xy];
-    float2 h0 = initialSignal.xy;
-    float2 h0conj = initialSignal.zw;
+    //float2 h0 = initialSignal.xy;
+    //float2 h0conj = initialSignal.zw;
+
+    uint seed = id.x + _N * id.y + _N;
 
     float halfN = _N / 2.0f;
 
@@ -86,8 +94,16 @@ void CS_UpdateSpectrum(uint3 id : SV_DISPATCHTHREADID) {
     float m = id.y - halfN;
 
     float2 K = float2(n, m) * 2.0f * PI / _LengthScale;
+
+    float4 uniformRandSamples = float4(hash(seed), hash(seed * seed), hash(seed * seed * seed), hash(seed * seed * seed * 0.25));
+    float2 gauss1 = UniformToGaussian(uniformRandSamples.x, uniformRandSamples.y);
+    float2 gauss2 = UniformToGaussian(uniformRandSamples.z, uniformRandSamples.w);
+
+    float2 h0 = SampleSpectrum(K, float2(gauss1.x, gauss2.y));
+    float2 h0conj = SampleSpectrum(-K, float2(gauss1.y, gauss2.x));
+
     float w_0 = 2.0f * PI / 200.0f;
-    float dispersion = floor(sqrt(9.8f * length(K)) / w_0) * w_0 * _FrameTime;
+    float dispersion = floor(sqrt(9.81f * length(K)) / w_0) * w_0 * _FrameTime;
 
     _ProgressedSpectrumTex[id.xy] = ComplexMult(h0, EulerFormula(dispersion)) + ComplexMult(h0conj, EulerFormula(-dispersion));
 }
@@ -99,6 +115,7 @@ void CS_DFT(uint3 id : SV_DISPATCHTHREADID) {
     float2 x = id.xy - halfN;
 
     float2 h = 0.0f;
+    float3 normal = 0.0f;
 
     for (int m = 0; m < _N; ++m) {
         float kz = 2.0f * PI * (m - halfN) / _LengthScale;
@@ -110,10 +127,15 @@ void CS_DFT(uint3 id : SV_DISPATCHTHREADID) {
 
             float2 c = EulerFormula(kdotx);
             float2 htilde = ComplexMult(_ProgressedSpectrumTex[uint2(n, m)], c);
-            if (kMag < 0.001f) htilde = 0.0f;
+            
             h += htilde;
+            normal += float3(-K.x * htilde.y, 0.0f, -K.y * htilde.y);
         }
     }
+
+    normal = float3(-normal.x, 1.0f, -normal.z);
+    normal = normalize(normal);
     
     _HeightTex[id.xy] = h.x;
+    _NormalTex[id.xy] = float4(normal, 0.0f);
 }

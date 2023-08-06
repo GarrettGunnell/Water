@@ -174,7 +174,7 @@ public class FFTWater : MonoBehaviour {
         waterMaterial.SetFloat("_SpecularNormalStrength", specularNormalStrength);
         waterMaterial.SetInt("_UseEnvironmentMap", useTextureForFresnel ? 1 : 0);
 
-        fftComputeShader.SetFloat("_FrameTime", Time.time);
+        fftComputeShader.SetFloat("_FrameTime", Time.time * 3);
         fftComputeShader.SetInt("_N", N);
         fftComputeShader.SetInt("_LengthScale", length);
 
@@ -184,6 +184,7 @@ public class FFTWater : MonoBehaviour {
 
         fftComputeShader.SetTexture(2, "_HeightTex", heightTex);
         fftComputeShader.SetTexture(2, "_ProgressedSpectrumTex", progressedSpectrumTex);
+        fftComputeShader.SetTexture(2, "_NormalTex", normalTex);
         fftComputeShader.Dispatch(2, threadGroupsX, threadGroupsY, 1);
 
         waterMaterial.SetTexture("_HeightTex", heightTex);

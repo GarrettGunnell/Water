@@ -60,13 +60,13 @@ Shader "Custom/FFTWater" {
             SamplerState point_repeat_sampler, linear_repeat_sampler;
             sampler2D _NormalTex;
 
-            #define TILE 0.05
+            #define TILE 0.98
 
 			v2f vp(VertexData v) {
 				v2f i;
                 i.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 i.normal = normalize(UnityObjectToWorldNormal(v.normal));
-                i.pos = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * TILE, 0).r, 0.0f));
+                i.pos = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * TILE + 0.01, 0).r, 0.0f));
                 //i.pos = UnityObjectToClipPos(v.vertex);
                 i.uv = v.uv;
 				
@@ -85,9 +85,8 @@ Shader "Custom/FFTWater" {
                 float3 halfwayDir = normalize(lightDir + viewDir);
 
                 float height = 0.0f;
-				float3 normal = normalize(i.normal);
-                float2 n = tex2D(_NormalTex, i.uv).rg;
-                normal = normalize(UnityObjectToWorldNormal(normalize(float3(-n.x, 1.0f, -n.y))));
+				float3 normal = tex2D(_NormalTex, i.uv).rgb;
+                //normal = normalize(UnityObjectToWorldNormal(normalize(normal)));
 
 				// normal = centralDifferenceNormal(i.worldPos, 0.01f);
 				normal.xz *= _NormalStrength;
@@ -139,8 +138,8 @@ Shader "Custom/FFTWater" {
 
 				float3 output = _Ambient + diffuse + specular + fresnel + tipColor;
 				
-				return _HeightTex.Sample(point_repeat_sampler, i.uv).r;
-                return _SpectrumTex.Sample(point_repeat_sampler, i.uv * TILE);
+				//return _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE).r;
+                //return _SpectrumTex.Sample(point_repeat_sampler, i.uv);
 				return float4(output, 1.0f);
 			}
 
