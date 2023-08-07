@@ -323,16 +323,18 @@ MonoBehaviour:
   atmosphere: {fileID: 963194230}
   planeLength: 100
   quadRes: 10
+  lengthScale: 256
   seed: 0
-  A: 1
+  A: 15.9
   wind: {x: 1, y: 1}
-  windSpeed: 1
+  windSpeed: 57
   gravity: 9.81
   damping: 1
   repeatTime: 200
   updateSpectrum: 0
   speed: 1
   lambda: {x: -1, y: -1}
+  useFFT: 1
   normalStrength: 1
   ambient: {r: 0, g: 0, b: 0, a: 0}
   diffuseReflectance: {r: 1, g: 1, b: 1, a: 0}
@@ -814,7 +816,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe1b18386f62f2d4e8123ded415eace7, type: 3}
   m_Name: 
@@ -822,7 +824,7 @@ MonoBehaviour:
   debugShader: {fileID: 4800000, guid: 85168c726e7b2e94498b6be5a0caebfc, type: 3}
   fftWater: {fileID: 19044813}
   debugTexture: 0
-  channels: {x: 1, y: 1, z: 1}
+  channels: {x: 1, y: 0, z: 0}
   showAlpha: 0
   absolute: 0
   exposure: 1

@@ -59,13 +59,14 @@ Shader "Custom/FFTWater" {
             Texture2D _HeightTex, _SpectrumTex, _NormalTex;
             SamplerState point_repeat_sampler, linear_repeat_sampler;
 
-            #define TILE 0.98
+            #define TILE 0.5
 
 			v2f vp(VertexData v) {
 				v2f i;
                 i.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 i.normal = normalize(UnityObjectToWorldNormal(v.normal));
 				float4 heightDisplacement = _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * TILE + 0.01f, 0);
+				heightDisplacement.gba = 0.0f;
 
                 i.pos = UnityObjectToClipPos(v.vertex + float3(heightDisplacement.g,  heightDisplacement.r, heightDisplacement.b));
                 //i.pos = UnityObjectToClipPos(v.vertex);
@@ -139,7 +140,7 @@ Shader "Custom/FFTWater" {
 
 				float3 output = _Ambient + diffuse + specular + fresnel + tipColor;
 				
-				//return _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE + 0.01f).g * -1;
+				return _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE + 0.01f).r *0.15f + 0.5f;
                 //return _SpectrumTex.Sample(point_repeat_sampler, i.uv);
 				return float4(output, 1.0f);
 			}

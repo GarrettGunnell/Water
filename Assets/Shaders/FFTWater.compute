@@ -4,9 +4,9 @@
 #pragma kernel CS_UpdateSpectrumForFFT
 #pragma kernel CS_PrecomputeTwiddleFactorsAndInputIndices
 #pragma kernel CS_HorizontalStepInverseFFT
-//#pragma kernel CS_VerticalStepInverseFFT
+#pragma kernel CS_VerticalStepInverseFFT
 //#pragma kernel CS_Scale
-//#pragma kernel CS_Permute
+#pragma kernel CS_Permute
 
 #define PI 3.14159265358979323846
 
@@ -173,8 +173,8 @@ float2 ComplexExp(float2 a) {
 
 RWTexture2D<float4> _PrecomputeBuffer;
 Texture2D<float4> _PrecomputedData;
-RWTexture2D<float4> _Buffer0;
-RWTexture2D<float4> _Buffer1;
+RWTexture2D<float2> _Buffer0;
+RWTexture2D<float2> _Buffer1;
 bool _PingPong;
 uint _Step;
 
@@ -212,4 +212,34 @@ void CS_HorizontalStepInverseFFT(uint3 id : SV_DISPATCHTHREADID) {
         _Buffer1[id.xy] = float4(output, 0, 0);
     else
         _Buffer0[id.xy] = float4(output, 0, 0);
+}
+
+[numthreads(8,8,1)]
+void CS_VerticalStepInverseFFT(uint3 id : SV_DISPATCHTHREADID) {
+    float4 data = _PrecomputedData[uint2(_Step, id.y)];
+
+    uint2 inputsIndices = (uint2)data.ba;
+
+    float2 x = 0.0f;
+    float2 y = 0.0f;
+
+    if (_PingPong) {
+        x = _Buffer0[uint2(id.x, inputsIndices.x)].rg;
+        y = _Buffer0[uint2(id.x, inputsIndices.y)].rg;
+    } else {
+        x = _Buffer1[uint2(id.x, inputsIndices.x)].rg;
+        y = _Buffer1[uint2(id.x, inputsIndices.y)].rg;
+    }
+
+    float2 output = x + ComplexMult(float2(data.r, -data.g), y);
+
+    if (_PingPong)
+        _Buffer1[id.xy] = float4(output, 0, 0);
+    else
+        _Buffer0[id.xy] = float4(output, 0, 0);
+}
+
+[numthreads(8, 8, 1)]
+void CS_Permute(uint3 id : SV_DISPATCHTHREADID) {
+    _Buffer0[id.xy] = _Buffer0[id.xy] * (1.0f - 2.0f * ((id.x + id.y) % 2));
 }
