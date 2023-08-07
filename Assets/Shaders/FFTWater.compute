@@ -5,17 +5,20 @@
 #pragma kernel CS_PrecomputeTwiddleFactorsAndInputIndices
 #pragma kernel CS_HorizontalStepInverseFFT
 #pragma kernel CS_VerticalStepInverseFFT
-//#pragma kernel CS_Scale
 #pragma kernel CS_Permute
+#pragma kernel CS_AssembleMaps
 
 #define PI 3.14159265358979323846
 
 RWTexture2D<float4> _InitialSpectrumTex;
 RWTexture2D<float2> _ProgressedSpectrumTex;
 RWTexture2D<float4> _HeightTex, _NormalTex;
+
+RWTexture2D<float2> _HTildeTex, _HTildeSlopeXTex, _HTildeSlopeZTex, _HTildeDisplacementXTex, _HTildeDisplacementZTex;
+
 float _FrameTime, _A, _Gravity, _RepeatTime, _Damping;
 int _Seed;
-float2 _Wind, _Lambda;
+float2 _Wind, _Lambda, _NormalStrength;
 uint _N, _LengthScale;
 
 float2 ComplexMult(float2 a, float2 b) {
@@ -60,7 +63,7 @@ float PhillipsSpectrum(float2 k) {
     float damping = _Damping;
     float l2 = L2 * damping * damping;
 
-    return A * exp(-1.0f / (k2 * L2)) / k4 * kdotw2 * kdotw2 * kdotw2 * exp(-k2 * l2);
+    return A * exp(-1.0f / (k2 * L2)) / k4 * kdotw2 * exp(-k2 * l2);
 }
 
 float2 SampleSpectrum(float2 k, float2 rand) {
@@ -144,9 +147,6 @@ void CS_DFT(uint3 id : SV_DISPATCHTHREADID) {
     _NormalTex[id.xy] = float4(normal, 0.0f);
 }
 
-RWTexture2D<float2> _HTilde;
-
-
 [numthreads(8, 8, 1)]
 void CS_UpdateSpectrumForFFT(uint3 id : SV_DISPATCHTHREADID) {
     float4 initialSignal = _InitialSpectrumTex[id.xy];
@@ -155,16 +155,30 @@ void CS_UpdateSpectrumForFFT(uint3 id : SV_DISPATCHTHREADID) {
 
     float halfN = _N / 2.0f;
     float2 K = (id.xy - halfN) * 2.0f * PI / _LengthScale;
+    float kMag = length(K);
+    float kMagRcp = rcp(kMag);
 
     float w_0 = 2.0f * PI / _RepeatTime;
-    float dispersion = floor(sqrt(_Gravity * length(K)) / w_0) * w_0 * _FrameTime;
+    float dispersion = floor(sqrt(_Gravity * kMag) / w_0) * w_0 * _FrameTime;
 
     float2 exponent = EulerFormula(dispersion);
 
     float2 htilde = ComplexMult(h0, exponent) + ComplexMult(h0conj, float2(exponent.x, -exponent.y));
 
+    float2 displacementX = ComplexMult(htilde, float2(0, -K.x / kMag));
+    float2 displacementZ = ComplexMult(htilde, float2(0, -K.y / kMag));
+
+    if (kMag < 0.00001f) {
+        displacementX = 0;
+        displacementZ = 0;
+    }
+
     // Avoids doubling up on euler formula calc when there's no need
-    _HTilde[id.xy] = htilde;
+    _HTildeTex[id.xy] = htilde;
+    _HTildeSlopeXTex[id.xy] = ComplexMult(htilde, float2(0, K.x));
+    _HTildeSlopeZTex[id.xy] = ComplexMult(htilde, float2(0, K.y));
+    _HTildeDisplacementXTex[id.xy] = displacementX;
+    _HTildeDisplacementZTex[id.xy] = displacementZ;
 }
 
 float2 ComplexExp(float2 a) {
@@ -242,4 +256,16 @@ void CS_VerticalStepInverseFFT(uint3 id : SV_DISPATCHTHREADID) {
 [numthreads(8, 8, 1)]
 void CS_Permute(uint3 id : SV_DISPATCHTHREADID) {
     _Buffer0[id.xy] = _Buffer0[id.xy] * (1.0f - 2.0f * ((id.x + id.y) % 2));
+}
+
+[numthreads(8, 8, 1)]
+void CS_AssembleMaps(uint3 id: SV_DISPATCHTHREADID) {
+    float2 htilde = _HTildeTex[id.xy];
+    float2 slopeX = _HTildeSlopeXTex[id.xy] * _NormalStrength;
+    float2 slopeZ = _HTildeSlopeZTex[id.xy] * _NormalStrength;
+    float2 displacementX = _HTildeDisplacementXTex[id.xy];
+    float2 displacementZ = _HTildeDisplacementZTex[id.xy];
+
+    _HeightTex[id.xy] = float4(htilde.x, displacementX.x * _Lambda.x, displacementZ.x * _Lambda.y, 0);
+    _NormalTex[id.xy] = float4(normalize(float3(-slopeX.x, 1.0f, -slopeZ.x)), 0.0f);
 }

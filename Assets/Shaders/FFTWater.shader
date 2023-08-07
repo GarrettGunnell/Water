@@ -66,7 +66,6 @@ Shader "Custom/FFTWater" {
                 i.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 i.normal = normalize(UnityObjectToWorldNormal(v.normal));
 				float4 heightDisplacement = _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * TILE + 0.01f, 0);
-				heightDisplacement.gba = 0.0f;
 
                 i.pos = UnityObjectToClipPos(v.vertex + float3(heightDisplacement.g,  heightDisplacement.r, heightDisplacement.b));
                 //i.pos = UnityObjectToClipPos(v.vertex);
@@ -91,8 +90,6 @@ Shader "Custom/FFTWater" {
                 //normal = normalize(UnityObjectToWorldNormal(normalize(normal)));
 
 				// normal = centralDifferenceNormal(i.worldPos, 0.01f);
-				normal.xz *= _NormalStrength;
-				normal = normalize(normal);
 
 				float ndotl = DotClamped(lightDir, normal);
 
@@ -136,11 +133,11 @@ Shader "Custom/FFTWater" {
 				
 
 
-				float3 tipColor = _TipColor * saturate(pow(max(0.0f, height / 4.0f), _TipAttenuation));
+				float3 tipColor = _TipColor * saturate(pow(max(0.0f, height / 7.0f), _TipAttenuation));
 
 				float3 output = _Ambient + diffuse + specular + fresnel + tipColor;
 				
-				return _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE + 0.01f).r *0.15f + 0.5f;
+				//return _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE + 0.01f).r *0.15f + 0.5f;
                 //return _SpectrumTex.Sample(point_repeat_sampler, i.uv);
 				return float4(output, 1.0f);
 			}

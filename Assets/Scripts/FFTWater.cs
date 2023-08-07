@@ -100,7 +100,18 @@ public class FFTWater : MonoBehaviour {
     [Range(0.0f, 5.0f)]
     public float tipAttenuation = 1.0f;
 
-    private RenderTexture heightTex, normalTex, initialSpectrumTex, progressedSpectrumTex, twiddleFactorTex, pingPongTex, htildeTex, htildeSlopeXTex, htildeSlopeZTex;
+    private RenderTexture heightTex, 
+                          normalTex, 
+                          initialSpectrumTex, 
+                          progressedSpectrumTex, 
+                          twiddleFactorTex, 
+                          pingPongTex, 
+                          htildeTex, 
+                          htildeSlopeXTex, 
+                          htildeSlopeZTex, 
+                          htildeDisplacementXTex, 
+                          htildeDisplacementZTex;
+
     private int N, logN, threadGroupsX, threadGroupsY;
 
     public RenderTexture GetDisplacementMap() {
@@ -190,6 +201,7 @@ public class FFTWater : MonoBehaviour {
         fftComputeShader.SetInt("_N", N);
         fftComputeShader.SetInt("_Seed", seed);
         fftComputeShader.SetInt("_LengthScale", lengthScale);
+        fftComputeShader.SetFloat("_NormalStrength", normalStrength);
     }
 
     void InverseFFT(RenderTexture spectrumTex) {
@@ -235,7 +247,7 @@ public class FFTWater : MonoBehaviour {
         CreateMaterial();
         cam = GameObject.Find("Main Camera").GetComponent<Camera>();
 
-        N = 256;
+        N = 1024;
         threadGroupsX = Mathf.CeilToInt(N / 8.0f);
         threadGroupsY = Mathf.CeilToInt(N / 8.0f);
 
@@ -244,6 +256,8 @@ public class FFTWater : MonoBehaviour {
         htildeTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
         htildeSlopeXTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
         htildeSlopeZTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
+        htildeDisplacementXTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
+        htildeDisplacementZTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
         pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
         heightTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         normalTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
@@ -290,12 +304,29 @@ public class FFTWater : MonoBehaviour {
         if (useFFT) {
             // Progress Spectrum For FFT
             fftComputeShader.SetTexture(3, "_InitialSpectrumTex", initialSpectrumTex);
-            fftComputeShader.SetTexture(3, "_HTilde", htildeTex);
+            fftComputeShader.SetTexture(3, "_HTildeTex", htildeTex);
+            fftComputeShader.SetTexture(3, "_HTildeSlopeXTex", htildeSlopeXTex);
+            fftComputeShader.SetTexture(3, "_HTildeSlopeZTex", htildeSlopeZTex);
+            fftComputeShader.SetTexture(3, "_HTildeDisplacementXTex", htildeDisplacementXTex);
+            fftComputeShader.SetTexture(3, "_HTildeDisplacementZTex", htildeDisplacementZTex);
             fftComputeShader.Dispatch(3, threadGroupsX, threadGroupsY, 1);
 
             // Compute FFT For Height
             InverseFFT(htildeTex);
-            Graphics.Blit(htildeTex, heightTex);
+            InverseFFT(htildeSlopeXTex);
+            InverseFFT(htildeSlopeZTex);
+            InverseFFT(htildeDisplacementXTex);
+            InverseFFT(htildeDisplacementZTex);
+
+            // Assemble maps
+            fftComputeShader.SetTexture(8, "_HTildeTex", htildeTex);
+            fftComputeShader.SetTexture(8, "_HTildeSlopeXTex", htildeSlopeXTex);
+            fftComputeShader.SetTexture(8, "_HTildeSlopeZTex", htildeSlopeZTex);
+            fftComputeShader.SetTexture(8, "_HTildeDisplacementXTex", htildeDisplacementXTex);
+            fftComputeShader.SetTexture(8, "_HTildeDisplacementZTex", htildeDisplacementZTex);
+            fftComputeShader.SetTexture(8, "_HeightTex", heightTex);
+            fftComputeShader.SetTexture(8, "_NormalTex", normalTex);
+            fftComputeShader.Dispatch(8, threadGroupsX, threadGroupsY, 1);
         } else {
             // Progress Spectrum For DFT
             fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);
