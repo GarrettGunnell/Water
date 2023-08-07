@@ -53,6 +53,8 @@ public class FFTWater : MonoBehaviour {
 
     public Vector2 lambda = new Vector2(-1.0f, -1.0f);
 
+    public bool useFFT = true;
+
 
     [Header("Material Settings")]
     [Range(0.0f, 5.0f)]
@@ -98,8 +100,8 @@ public class FFTWater : MonoBehaviour {
     [Range(0.0f, 5.0f)]
     public float tipAttenuation = 1.0f;
 
-    private RenderTexture heightTex, normalTex, initialSpectrumTex, progressedSpectrumTex;
-    private int N, length, threadGroupsX, threadGroupsY;
+    private RenderTexture heightTex, normalTex, initialSpectrumTex, progressedSpectrumTex, twiddleFactorTex, pingPongTex;
+    private int N, logN, threadGroupsX, threadGroupsY;
 
     public RenderTexture GetDisplacementMap() {
         return heightTex;
@@ -115,6 +117,10 @@ public class FFTWater : MonoBehaviour {
 
     public RenderTexture GetProgressedSpectrum() {
         return progressedSpectrumTex;
+    }
+
+    public RenderTexture GetTwiddleFactor() {
+        return twiddleFactorTex;
     }
 
     private void CreateWaterPlane() {
@@ -171,6 +177,21 @@ public class FFTWater : MonoBehaviour {
         renderer.material = waterMaterial;
     }
 
+    void SetFFTUniforms() {
+        Vector2 windDirection = wind;
+        windDirection.Normalize();
+        fftComputeShader.SetFloat("_A", A / 100000000);
+        fftComputeShader.SetVector("_Wind", windDirection * windSpeed);
+        fftComputeShader.SetVector("_Lambda", lambda);
+        fftComputeShader.SetFloat("_FrameTime", Time.time * speed);
+        fftComputeShader.SetFloat("_Gravity", gravity);
+        fftComputeShader.SetFloat("_RepeatTime", repeatTime);
+        fftComputeShader.SetFloat("_Damping", damping / 100000);
+        fftComputeShader.SetInt("_N", N);
+        fftComputeShader.SetInt("_Seed", seed);
+        fftComputeShader.SetInt("_LengthScale", lengthScale);
+    }
+
 
     void OnEnable() {
         CreateWaterPlane();
@@ -197,24 +218,26 @@ public class FFTWater : MonoBehaviour {
         normalTex.enableRandomWrite = true;
         normalTex.Create();
 
-        
-        Vector2 windDirection = wind;
-        windDirection.Normalize();
-        fftComputeShader.SetFloat("_A", A / 100000000);
-        fftComputeShader.SetVector("_Wind", windDirection * windSpeed);
-        fftComputeShader.SetVector("_Lambda", lambda);
-        fftComputeShader.SetFloat("_FrameTime", Time.time * speed);
-        fftComputeShader.SetFloat("_Gravity", gravity);
-        fftComputeShader.SetFloat("_RepeatTime", repeatTime);
-        fftComputeShader.SetFloat("_Damping", damping / 100000);
-        fftComputeShader.SetInt("_N", N);
-        fftComputeShader.SetInt("_Seed", seed);
-        fftComputeShader.SetInt("_LengthScale", lengthScale);
+        pingPongTex = new RenderTexture(N, N, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+        pingPongTex.enableRandomWrite = true;
+        pingPongTex.Create();
 
+        SetFFTUniforms();
         fftComputeShader.SetTexture(0, "_HeightTex", heightTex);
         fftComputeShader.SetTexture(0, "_NormalTex", normalTex);
         fftComputeShader.SetTexture(0, "_InitialSpectrumTex", initialSpectrumTex);
         fftComputeShader.Dispatch(0, threadGroupsX, threadGroupsY, 1);
+
+        //Precompute Twiddle Factors for FFT
+        logN = (int)Mathf.Log(N, 2);
+        twiddleFactorTex = new RenderTexture(logN, N, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        twiddleFactorTex.filterMode = FilterMode.Point;
+        twiddleFactorTex.wrapMode = TextureWrapMode.Repeat;
+        twiddleFactorTex.enableRandomWrite = true;
+        twiddleFactorTex.Create();
+
+        fftComputeShader.SetTexture(4, "_PrecomputeBuffer", twiddleFactorTex);
+        fftComputeShader.Dispatch(4, logN, (N / 2) / 8, 1);
 
     }
 
@@ -234,35 +257,45 @@ public class FFTWater : MonoBehaviour {
         waterMaterial.SetFloat("_SpecularNormalStrength", specularNormalStrength);
         waterMaterial.SetInt("_UseEnvironmentMap", useTextureForFresnel ? 1 : 0);
 
-        Vector2 windDirection = wind;
-        windDirection.Normalize();
-        fftComputeShader.SetFloat("_A", A / 100000000);
-        fftComputeShader.SetVector("_Wind", windDirection * windSpeed);
-        fftComputeShader.SetVector("_Lambda", lambda);
-        fftComputeShader.SetFloat("_FrameTime", Time.time * speed);
-        fftComputeShader.SetFloat("_Gravity", gravity);
-        fftComputeShader.SetFloat("_RepeatTime", repeatTime);
-        fftComputeShader.SetFloat("_Damping", damping / 100000);
-        fftComputeShader.SetInt("_N", N);
-        fftComputeShader.SetInt("_Seed", seed);
-        fftComputeShader.SetInt("_LengthScale", lengthScale);
-
+        SetFFTUniforms();
         if (updateSpectrum) {
             fftComputeShader.SetTexture(0, "_HeightTex", heightTex);
             fftComputeShader.SetTexture(0, "_NormalTex", normalTex);
             fftComputeShader.SetTexture(0, "_InitialSpectrumTex", initialSpectrumTex);
             fftComputeShader.Dispatch(0, threadGroupsX, threadGroupsY, 1);
         }
+        
+        if (useFFT) {
+            // Progress Spectrum For FFT
+            fftComputeShader.SetTexture(3, "_InitialSpectrumTex", initialSpectrumTex);
+            fftComputeShader.SetTexture(3, "_HTilde", progressedSpectrumTex);
+            fftComputeShader.Dispatch(3, threadGroupsX, threadGroupsY, 1);
 
-        fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);
-        fftComputeShader.SetTexture(1, "_ProgressedSpectrumTex", progressedSpectrumTex);
-        fftComputeShader.Dispatch(1, threadGroupsX, threadGroupsY, 1);
+            Graphics.Blit(progressedSpectrumTex, heightTex);
+            
+            bool pingPong = false;
+            // Compute FFT For Height
+            fftComputeShader.SetTexture(5, "_PrecomputedData", twiddleFactorTex);
+            fftComputeShader.SetTexture(5, "_Buffer0", heightTex);
+            fftComputeShader.SetTexture(5, "_Buffer1", pingPongTex);
+            for (int i = 0; i < logN; ++i) {
+                pingPong = !pingPong;
+                fftComputeShader.SetInt("_Step", i);
+                fftComputeShader.SetBool("_PingPong", pingPong);
+                fftComputeShader.Dispatch(5, threadGroupsX, threadGroupsY, 1);
+            }
+        } else {
+            // Progress Spectrum For DFT
+            fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);
+            fftComputeShader.SetTexture(1, "_ProgressedSpectrumTex", progressedSpectrumTex);
+            fftComputeShader.Dispatch(1, threadGroupsX, threadGroupsY, 1);
 
-        fftComputeShader.SetTexture(2, "_HeightTex", heightTex);
-        fftComputeShader.SetTexture(2, "_ProgressedSpectrumTex", progressedSpectrumTex);
-        fftComputeShader.SetTexture(2, "_NormalTex", normalTex);
-        fftComputeShader.Dispatch(2, threadGroupsX, threadGroupsY, 1);
-
+            // Calculate DFT and store height, displacement, and normal from DFT output into textures
+            fftComputeShader.SetTexture(2, "_HeightTex", heightTex);
+            fftComputeShader.SetTexture(2, "_ProgressedSpectrumTex", progressedSpectrumTex);
+            fftComputeShader.SetTexture(2, "_NormalTex", normalTex);
+            fftComputeShader.Dispatch(2, threadGroupsX, threadGroupsY, 1);
+        }
         waterMaterial.SetTexture("_HeightTex", heightTex);
         waterMaterial.SetTexture("_NormalTex", normalTex);
         waterMaterial.SetTexture("_SpectrumTex", progressedSpectrumTex);

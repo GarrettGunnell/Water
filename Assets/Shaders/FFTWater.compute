@@ -2,6 +2,11 @@
 #pragma kernel CS_UpdateSpectrumForDFT
 #pragma kernel CS_DFT
 #pragma kernel CS_UpdateSpectrumForFFT
+#pragma kernel CS_PrecomputeTwiddleFactorsAndInputIndices
+#pragma kernel CS_HorizontalStepInverseFFT
+//#pragma kernel CS_VerticalStepInverseFFT
+//#pragma kernel CS_Scale
+//#pragma kernel CS_Permute
 
 #define PI 3.14159265358979323846
 
@@ -11,7 +16,7 @@ RWTexture2D<float4> _HeightTex, _NormalTex;
 float _FrameTime, _A, _Gravity, _RepeatTime, _Damping;
 int _Seed;
 float2 _Wind, _Lambda;
-int _N, _LengthScale;
+uint _N, _LengthScale;
 
 float2 ComplexMult(float2 a, float2 b) {
     return float2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
@@ -160,4 +165,51 @@ void CS_UpdateSpectrumForFFT(uint3 id : SV_DISPATCHTHREADID) {
 
     // Avoids doubling up on euler formula calc when there's no need
     _HTilde[id.xy] = htilde;
+}
+
+float2 ComplexExp(float2 a) {
+    return float2(cos(a.y), sin(a.y) * exp(a.x));
+}
+
+RWTexture2D<float4> _PrecomputeBuffer;
+Texture2D<float4> _PrecomputedData;
+RWTexture2D<float4> _Buffer0;
+RWTexture2D<float4> _Buffer1;
+bool _PingPong;
+uint _Step;
+
+// FFT Implementation largely referenced from https://github.com/gasgiant/FFT-Ocean/blob/main/Assets/ComputeShaders/FastFourierTransform.compute
+[numthreads(1, 8, 1)]
+void CS_PrecomputeTwiddleFactorsAndInputIndices(uint3 id : SV_DISPATCHTHREADID) {
+    uint b = _N >> (id.x + 1);
+    float2 mult = 2 * PI * float2(0.0f, 1.0f) / _N;
+    uint i = (2 * b * (id.y / b) + id.y % b) % _N;
+    float2 twiddle = ComplexExp(-mult * ((id.y / b) * b));
+    _PrecomputeBuffer[id.xy] = float4(twiddle, i, i + b);
+    _PrecomputeBuffer[uint2(id.x, id.y + _N / 2)] = float4(-twiddle, i, i + b);
+}
+
+[numthreads(8,8,1)]
+void CS_HorizontalStepInverseFFT(uint3 id : SV_DISPATCHTHREADID) {
+    float4 data = _PrecomputedData[uint2(_Step, id.x)];
+
+    uint2 inputsIndices = (uint2)data.ba;
+
+    float2 x = 0.0f;
+    float2 y = 0.0f;
+
+    if (_PingPong) {
+        x = _Buffer0[uint2(inputsIndices.x, id.y)].rg;
+        y = _Buffer0[uint2(inputsIndices.y, id.y)].rg;
+    } else {
+        x = _Buffer1[uint2(inputsIndices.x, id.y)].rg;
+        y = _Buffer1[uint2(inputsIndices.y, id.y)].rg;
+    }
+
+    float2 output = x + ComplexMult(float2(data.r, -data.g), y);
+
+    if (_PingPong)
+        _Buffer1[id.xy] = float4(output, 0, 0);
+    else
+        _Buffer0[id.xy] = float4(output, 0, 0);
 }
