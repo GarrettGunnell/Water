@@ -321,8 +321,18 @@ MonoBehaviour:
   waterShader: {fileID: 4800000, guid: 16bcf694f2309c143b77d97af3b9cc8d, type: 3}
   fftComputeShader: {fileID: 7200000, guid: 9b59da7d74bb689429dab3b1e55bec89, type: 3}
   atmosphere: {fileID: 963194230}
-  planeLength: 10
+  planeLength: 100
   quadRes: 10
+  seed: 0
+  A: 1
+  wind: {x: 1, y: 1}
+  windSpeed: 1
+  gravity: 9.81
+  damping: 1
+  repeatTime: 200
+  updateSpectrum: 0
+  speed: 1
+  lambda: {x: -1, y: -1}
   normalStrength: 1
   ambient: {r: 0, g: 0, b: 0, a: 0}
   diffuseReflectance: {r: 1, g: 1, b: 1, a: 0}
@@ -640,6 +650,7 @@ GameObject:
   - component: {fileID: 963194229}
   - component: {fileID: 963194231}
   - component: {fileID: 963194230}
+  - component: {fileID: 963194232}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -769,7 +780,7 @@ MonoBehaviour:
   skyboxTex: {fileID: 8900000, guid: 8a293ce833d584fc98516e0e74f495a4, type: 3}
   skyboxDirection: {x: 0, y: -1, z: 0}
   skyboxSpeed: 0.05
-  sunDirection: {x: 0, y: -1, z: 0.5}
+  sunDirection: {x: 0, y: -1, z: -6}
   sunColor: {r: 1, g: 1, b: 1, a: 0}
   fogHeight: 500
   fogAttenuation: 1.2
@@ -796,6 +807,25 @@ MonoBehaviour:
   downSampleDelta: 1
   upSampleDelta: 0.5
   bloomIntensity: 1
+--- !u!114 &963194232
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 963194225}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe1b18386f62f2d4e8123ded415eace7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  debugShader: {fileID: 4800000, guid: 85168c726e7b2e94498b6be5a0caebfc, type: 3}
+  fftWater: {fileID: 19044813}
+  debugTexture: 0
+  channels: {x: 1, y: 1, z: 1}
+  showAlpha: 0
+  absolute: 0
+  exposure: 1
 --- !u!1 &972049850
 GameObject:
   m_ObjectHideFlags: 0

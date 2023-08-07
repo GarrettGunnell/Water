@@ -21,7 +21,40 @@ public class FFTWater : MonoBehaviour {
     private Mesh mesh;
     private Vector3[] vertices;
     private Vector3[] normals;
+
+    [Header("Spectrum Settings")]
+    [Range(0, 2048)]
+    public int lengthScale = 256;
+
+    [Range(0, 100000)]
+    public int seed = 0;
+
+    [Range(0.0f, 100.0f)]
+    public float A = 1.0f;
+
+    public Vector2 wind = new Vector2(1.0f, 1.0f);
     
+    [Range(0.0f, 200.0f)]
+    public float windSpeed = 1.0f;
+
+    [Range(0.0f, 20.0f)]
+    public float gravity = 9.81f;
+
+    [Range(0.0f, 100.0f)]
+    public float damping = 1.0f;
+
+    [Range(0.0f, 200.0f)]
+    public float repeatTime = 200.0f;
+
+    public bool updateSpectrum = false;
+
+    [Range(0.0f, 5.0f)]
+    public float speed = 1.0f;
+
+    public Vector2 lambda = new Vector2(-1.0f, -1.0f);
+
+
+    [Header("Material Settings")]
     [Range(0.0f, 5.0f)]
     public float normalStrength = 1;
 
@@ -67,6 +100,22 @@ public class FFTWater : MonoBehaviour {
 
     private RenderTexture heightTex, normalTex, initialSpectrumTex, progressedSpectrumTex;
     private int N, length, threadGroupsX, threadGroupsY;
+
+    public RenderTexture GetDisplacementMap() {
+        return heightTex;
+    }
+
+    public RenderTexture GetNormalMap() {
+        return normalTex;
+    }
+
+    public RenderTexture GetInitialSpectrum() {
+        return initialSpectrumTex;
+    }
+
+    public RenderTexture GetProgressedSpectrum() {
+        return progressedSpectrumTex;
+    }
 
     private void CreateWaterPlane() {
         GetComponent<MeshFilter>().mesh = mesh = new Mesh();
@@ -129,13 +178,10 @@ public class FFTWater : MonoBehaviour {
         cam = GameObject.Find("Main Camera").GetComponent<Camera>();
 
         N = 256;
-        length = 512;
         threadGroupsX = Mathf.CeilToInt(N / 8.0f);
         threadGroupsY = Mathf.CeilToInt(N / 8.0f);
-        fftComputeShader.SetInt("_N", N);
-        fftComputeShader.SetInt("_LengthScale", length);
 
-        initialSpectrumTex = new RenderTexture(N, N, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        initialSpectrumTex = new RenderTexture(N, N, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
         initialSpectrumTex.enableRandomWrite = true;
         initialSpectrumTex.Create();
 
@@ -143,13 +189,27 @@ public class FFTWater : MonoBehaviour {
         progressedSpectrumTex.enableRandomWrite = true;
         progressedSpectrumTex.Create();
 
-        heightTex = new RenderTexture(N, N, 0, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
+        heightTex = new RenderTexture(N, N, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
         heightTex.enableRandomWrite = true;
         heightTex.Create();
 
-        normalTex = new RenderTexture(N, N, 0, RenderTextureFormat.ARGB64, RenderTextureReadWrite.Linear);
+        normalTex = new RenderTexture(N, N, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
         normalTex.enableRandomWrite = true;
         normalTex.Create();
+
+        
+        Vector2 windDirection = wind;
+        windDirection.Normalize();
+        fftComputeShader.SetFloat("_A", A / 100000000);
+        fftComputeShader.SetVector("_Wind", windDirection * windSpeed);
+        fftComputeShader.SetVector("_Lambda", lambda);
+        fftComputeShader.SetFloat("_FrameTime", Time.time * speed);
+        fftComputeShader.SetFloat("_Gravity", gravity);
+        fftComputeShader.SetFloat("_RepeatTime", repeatTime);
+        fftComputeShader.SetFloat("_Damping", damping / 100000);
+        fftComputeShader.SetInt("_N", N);
+        fftComputeShader.SetInt("_Seed", seed);
+        fftComputeShader.SetInt("_LengthScale", lengthScale);
 
         fftComputeShader.SetTexture(0, "_HeightTex", heightTex);
         fftComputeShader.SetTexture(0, "_NormalTex", normalTex);
@@ -174,9 +234,25 @@ public class FFTWater : MonoBehaviour {
         waterMaterial.SetFloat("_SpecularNormalStrength", specularNormalStrength);
         waterMaterial.SetInt("_UseEnvironmentMap", useTextureForFresnel ? 1 : 0);
 
-        fftComputeShader.SetFloat("_FrameTime", Time.time * 3);
+        Vector2 windDirection = wind;
+        windDirection.Normalize();
+        fftComputeShader.SetFloat("_A", A / 100000000);
+        fftComputeShader.SetVector("_Wind", windDirection * windSpeed);
+        fftComputeShader.SetVector("_Lambda", lambda);
+        fftComputeShader.SetFloat("_FrameTime", Time.time * speed);
+        fftComputeShader.SetFloat("_Gravity", gravity);
+        fftComputeShader.SetFloat("_RepeatTime", repeatTime);
+        fftComputeShader.SetFloat("_Damping", damping / 100000);
         fftComputeShader.SetInt("_N", N);
-        fftComputeShader.SetInt("_LengthScale", length);
+        fftComputeShader.SetInt("_Seed", seed);
+        fftComputeShader.SetInt("_LengthScale", lengthScale);
+
+        if (updateSpectrum) {
+            fftComputeShader.SetTexture(0, "_HeightTex", heightTex);
+            fftComputeShader.SetTexture(0, "_NormalTex", normalTex);
+            fftComputeShader.SetTexture(0, "_InitialSpectrumTex", initialSpectrumTex);
+            fftComputeShader.Dispatch(0, threadGroupsX, threadGroupsY, 1);
+        }
 
         fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);
         fftComputeShader.SetTexture(1, "_ProgressedSpectrumTex", progressedSpectrumTex);

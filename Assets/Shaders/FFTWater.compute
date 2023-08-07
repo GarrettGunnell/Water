@@ -1,13 +1,16 @@
 #pragma kernel CS_InitializeSpectrum
-#pragma kernel CS_UpdateSpectrum
+#pragma kernel CS_UpdateSpectrumForDFT
 #pragma kernel CS_DFT
+#pragma kernel CS_UpdateSpectrumForFFT
 
 #define PI 3.14159265358979323846
 
 RWTexture2D<float4> _InitialSpectrumTex;
 RWTexture2D<float2> _ProgressedSpectrumTex;
 RWTexture2D<float4> _HeightTex, _NormalTex;
-float _FrameTime;
+float _FrameTime, _A, _Gravity, _RepeatTime, _Damping;
+int _Seed;
+float2 _Wind, _Lambda;
 int _N, _LengthScale;
 
 float2 ComplexMult(float2 a, float2 b) {
@@ -29,7 +32,7 @@ float2 UniformToGaussian(float u1, float u2) {
     float R = sqrt(-2.0f * log(u1));
     float theta = 2.0f * PI * u2;
 
-    return (float2(R * cos(theta), R * sin(theta)));
+    return float2(R * cos(theta), R * sin(theta));
 }
 
 float PhillipsSpectrum(float2 k) {
@@ -37,8 +40,8 @@ float PhillipsSpectrum(float2 k) {
     if (kMag < 0.0001f) return 0.0f;
 
     
-    float A = 0.000000075f;
-    float2 w = float2(-30.5f, 1.0f);
+    float A = _A;
+    float2 w = _Wind;
 
     float k2 = kMag * kMag;
     float k4 = k2 * k2;
@@ -46,13 +49,13 @@ float PhillipsSpectrum(float2 k) {
     float kdotw2 = kdotw * kdotw;
 
     float2 wMag = length(w);
-    float L = wMag * wMag / 9.81f;
+    float L = wMag * wMag / _Gravity;
     float L2 = L * L;
 
-    float damping = 0.00001f;
+    float damping = _Damping;
     float l2 = L2 * damping * damping;
 
-    return A * exp(-1.0f / (k2 * L2)) / k4 * kdotw2 * exp(-k2 * l2);
+    return A * exp(-1.0f / (k2 * L2)) / k4 * kdotw2 * kdotw2 * kdotw2 * exp(-k2 * l2);
 }
 
 float2 SampleSpectrum(float2 k, float2 rand) {
@@ -62,6 +65,7 @@ float2 SampleSpectrum(float2 k, float2 rand) {
 [numthreads(8,8,1)]
 void CS_InitializeSpectrum(uint3 id : SV_DISPATCHTHREADID) {
     uint seed = id.x + _N * id.y + _N;
+    seed += _Seed;
 
     float halfN = _N / 2.0f;
 
@@ -70,7 +74,7 @@ void CS_InitializeSpectrum(uint3 id : SV_DISPATCHTHREADID) {
 
     float2 K = float2(n, m) * 2.0f * PI / _LengthScale;
 
-    float4 uniformRandSamples = float4(hash(seed), hash(seed * seed), hash(seed * seed * seed), hash(seed * seed * seed * 0.25));
+    float4 uniformRandSamples = float4(hash(seed), hash(seed * 2), hash(seed * 3), hash(seed * 4));
     float2 gauss1 = UniformToGaussian(uniformRandSamples.x, uniformRandSamples.y);
     float2 gauss2 = UniformToGaussian(uniformRandSamples.z, uniformRandSamples.w);
 
@@ -81,32 +85,24 @@ void CS_InitializeSpectrum(uint3 id : SV_DISPATCHTHREADID) {
 }
 
 [numthreads(8,8,1)]
-void CS_UpdateSpectrum(uint3 id : SV_DISPATCHTHREADID) {
+void CS_UpdateSpectrumForDFT(uint3 id : SV_DISPATCHTHREADID) {
     float4 initialSignal = _InitialSpectrumTex[id.xy];
-    //float2 h0 = initialSignal.xy;
-    //float2 h0conj = initialSignal.zw;
-
-    uint seed = id.x + _N * id.y + _N;
+    float2 h0 = initialSignal.xy;
+    float2 h0conj = initialSignal.zw;
 
     float halfN = _N / 2.0f;
 
-    float n = id.x - halfN;
-    float m = id.y - halfN;
+    float2 K = (id.xy - halfN) * 2.0f * PI / _LengthScale;
 
-    float2 K = float2(n, m) * 2.0f * PI / _LengthScale;
+    float w_0 = 2.0f * PI / _RepeatTime;
+    float dispersion = floor(sqrt(_Gravity * length(K)) / w_0) * w_0 * _FrameTime;
 
-    float4 uniformRandSamples = float4(hash(seed), hash(seed * seed), hash(seed * seed * seed), hash(seed * seed * seed * 0.25));
-    float2 gauss1 = UniformToGaussian(uniformRandSamples.x, uniformRandSamples.y);
-    float2 gauss2 = UniformToGaussian(uniformRandSamples.z, uniformRandSamples.w);
+    float2 exponent = EulerFormula(dispersion);
 
-    float2 h0 = SampleSpectrum(K, float2(gauss1.x, gauss2.y));
-    float2 h0conj = SampleSpectrum(-K, float2(gauss1.y, gauss2.x));
-
-    float w_0 = 2.0f * PI / 200.0f;
-    float dispersion = floor(sqrt(9.81f * length(K)) / w_0) * w_0 * _FrameTime;
-
-    _ProgressedSpectrumTex[id.xy] = ComplexMult(h0, EulerFormula(dispersion)) + ComplexMult(h0conj, EulerFormula(-dispersion));
+    // Avoids doubling up on euler formula calc when there's no need
+    _ProgressedSpectrumTex[id.xy] = ComplexMult(h0, exponent) + ComplexMult(h0conj, float2(exponent.x, -exponent.y));
 }
+
 
 [numthreads(8, 8, 1)]
 void CS_DFT(uint3 id : SV_DISPATCHTHREADID) {
@@ -115,6 +111,7 @@ void CS_DFT(uint3 id : SV_DISPATCHTHREADID) {
     float2 x = id.xy - halfN;
 
     float2 h = 0.0f;
+    float2 displacement = 0.0f;
     float3 normal = 0.0f;
 
     for (int m = 0; m < _N; ++m) {
@@ -130,12 +127,37 @@ void CS_DFT(uint3 id : SV_DISPATCHTHREADID) {
             
             h += htilde;
             normal += float3(-K.x * htilde.y, 0.0f, -K.y * htilde.y);
+            if (kMag > 0.0001f)
+                displacement += K / kMag * htilde.y;
         }
     }
 
     normal = float3(-normal.x, 1.0f, -normal.z);
     normal = normalize(normal);
     
-    _HeightTex[id.xy] = h.x;
+    _HeightTex[id.xy] = float4(h.x, _Lambda * displacement, 0.0f);
     _NormalTex[id.xy] = float4(normal, 0.0f);
+}
+
+RWTexture2D<float2> _HTilde;
+
+
+[numthreads(8, 8, 1)]
+void CS_UpdateSpectrumForFFT(uint3 id : SV_DISPATCHTHREADID) {
+    float4 initialSignal = _InitialSpectrumTex[id.xy];
+    float2 h0 = initialSignal.xy;
+    float2 h0conj = initialSignal.zw;
+
+    float halfN = _N / 2.0f;
+    float2 K = (id.xy - halfN) * 2.0f * PI / _LengthScale;
+
+    float w_0 = 2.0f * PI / _RepeatTime;
+    float dispersion = floor(sqrt(_Gravity * length(K)) / w_0) * w_0 * _FrameTime;
+
+    float2 exponent = EulerFormula(dispersion);
+
+    float2 htilde = ComplexMult(h0, exponent) + ComplexMult(h0conj, float2(exponent.x, -exponent.y));
+
+    // Avoids doubling up on euler formula calc when there's no need
+    _HTilde[id.xy] = htilde;
 }

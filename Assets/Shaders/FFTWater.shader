@@ -56,9 +56,8 @@ Shader "Custom/FFTWater" {
 
 			float4x4 _CameraInvViewProjection;
 			sampler2D _CameraDepthTexture;
-            Texture2D _HeightTex, _SpectrumTex;
+            Texture2D _HeightTex, _SpectrumTex, _NormalTex;
             SamplerState point_repeat_sampler, linear_repeat_sampler;
-            sampler2D _NormalTex;
 
             #define TILE 0.98
 
@@ -66,7 +65,9 @@ Shader "Custom/FFTWater" {
 				v2f i;
                 i.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 i.normal = normalize(UnityObjectToWorldNormal(v.normal));
-                i.pos = UnityObjectToClipPos(v.vertex + float3(0.0f, _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * TILE + 0.01, 0).r, 0.0f));
+				float4 heightDisplacement = _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * TILE + 0.01f, 0);
+
+                i.pos = UnityObjectToClipPos(v.vertex + float3(heightDisplacement.g,  heightDisplacement.r, heightDisplacement.b));
                 //i.pos = UnityObjectToClipPos(v.vertex);
                 i.uv = v.uv;
 				
@@ -84,8 +85,8 @@ Shader "Custom/FFTWater" {
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
                 float3 halfwayDir = normalize(lightDir + viewDir);
 
-                float height = 0.0f;
-				float3 normal = tex2D(_NormalTex, i.uv).rgb;
+                float height = _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE + 0.01f).r;
+				float3 normal = normalize(_NormalTex.SampleLevel(linear_repeat_sampler, i.uv * TILE + 0.01f, 0).rgb);
                 //normal = normalize(UnityObjectToWorldNormal(normalize(normal)));
 
 				// normal = centralDifferenceNormal(i.worldPos, 0.01f);
@@ -134,11 +135,11 @@ Shader "Custom/FFTWater" {
 				
 
 
-				float3 tipColor = _TipColor * pow(height, _TipAttenuation);
+				float3 tipColor = _TipColor * saturate(pow(max(0.0f, height / 4.0f), _TipAttenuation));
 
 				float3 output = _Ambient + diffuse + specular + fresnel + tipColor;
 				
-				//return _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE).r;
+				//return _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE + 0.01f).g * -1;
                 //return _SpectrumTex.Sample(point_repeat_sampler, i.uv);
 				return float4(output, 1.0f);
 			}
