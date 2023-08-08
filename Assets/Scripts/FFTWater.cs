@@ -398,6 +398,12 @@ public class FFTWater : MonoBehaviour {
             fftComputeShader.SetTexture(8, "_NormalTex", normalTex);
             fftComputeShader.SetTexture(8, "_FoamTex", foamTex);
             fftComputeShader.Dispatch(8, threadGroupsX, threadGroupsY, 1);
+
+            Graphics.Blit(foamTex, pingPongTex);
+
+            fftComputeShader.SetTexture(9, "_PingTex", pingPongTex);
+            fftComputeShader.SetTexture(9, "_FoamTex", foamTex);
+            fftComputeShader.Dispatch(9, threadGroupsX, threadGroupsY, 1);
         } else {
             // Progress Spectrum For DFT
             fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);

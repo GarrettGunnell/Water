@@ -7,6 +7,7 @@
 #pragma kernel CS_VerticalStepInverseFFT
 #pragma kernel CS_Permute
 #pragma kernel CS_AssembleMaps
+#pragma kernel CS_AccumulateFoam
 
 #define PI 3.14159265358979323846
 
@@ -14,6 +15,7 @@ RWTexture2D<float4> _InitialSpectrumTex;
 RWTexture2D<float2> _ProgressedSpectrumTex;
 RWTexture2D<float4> _HeightTex, _NormalTex;
 RWTexture2D<float> _FoamTex;
+Texture2D<float2> _PingTex;
 
 RWTexture2D<float2> _HTildeTex, _HTildeSlopeXTex, _HTildeSlopeZTex, _HTildeDisplacementXTex, _HTildeDisplacementZTex;
 
@@ -326,23 +328,57 @@ void CS_Permute(uint3 id : SV_DISPATCHTHREADID) {
 }
 
 
-
 [numthreads(8, 8, 1)]
-void CS_AssembleMaps(uint3 id: SV_DISPATCHTHREADID) {
+void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
     float2 dxdz = _HTildeSlopeXTex[id.xy];
     float2 dydxz = _HTildeSlopeZTex[id.xy];
     float2 dyxdyz = _HTildeDisplacementXTex[id.xy];
     float2 dxxdzz = _HTildeDisplacementZTex[id.xy];
     
-
     float jacobian = (1.0f + _Lambda.x * dxxdzz.x) * (1.0f + _Lambda.y * dxxdzz.y) - _Lambda.x * _Lambda.y * dydxz.y * dydxz.y;
-
-    float currentFoam = _FoamTex[id.xy].r;
-    float newFoam = currentFoam + _DeltaTime * 20.5f / max(jacobian, 0.5f);
 
     float3 displacement = float3(_Lambda.x * dxdz.x, dydxz.x, _Lambda.y * dxdz.y);
 
-    _HeightTex[id.xy] = float4(displacement, 0.0f);
+    _HeightTex[id.xy] = float4(displacement, max(0.0f, -(jacobian + 1.0f)));
     _NormalTex[id.xy] = float4(dyxdyz, dxxdzz * _Lambda);
-    _FoamTex[id.xy] = max(0.0f, -jacobian);
+
+    float foam = _FoamTex[id.xy];
+    foam *= exp(-1.0f);
+    foam = saturate(foam);
+
+    jacobian = max(0.0f, -(jacobian - 0.95f));
+
+
+    if (jacobian > 0.0)
+        foam += 1.0f * jacobian;
+
+    _FoamTex[id.xy] = foam;
+}
+
+
+float gaussian(int x, int y) {
+    float _Spread = 2.0f;
+    float sigmaSqu = _Spread * _Spread;
+    return (1 / sqrt(2 * PI * sigmaSqu)) * exp(-((x * x) + (y * y)) / (2 * sigmaSqu));
+}
+
+SamplerState linear_repeat_sampler;
+
+[numthreads(8, 8, 1)]
+void CS_AccumulateFoam(uint3 id : SV_DISPATCHTHREADID) {
+    float foam = 0.0f;
+    float kernelSum = 0.0f;
+
+    int _KernelSize = 3;
+    float2 uv = (float2(id.xy)) / _N;
+
+    for (int x = -_KernelSize; x <= _KernelSize; ++x) {
+        for (int y = -_KernelSize; y <= _KernelSize; ++y) {
+            int2 uv = (id.xy + int2(x, y)) % _N;
+            foam += _PingTex[uv].r * gaussian(x, y);
+            kernelSum += gaussian(x, y);
+        }
+    }
+    
+    _FoamTex[id.xy] = foam / kernelSum;
 }

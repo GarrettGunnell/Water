@@ -59,7 +59,7 @@ Shader "Custom/FFTWater" {
             Texture2D _HeightTex, _SpectrumTex, _NormalTex, _FoamTex;
             SamplerState point_repeat_sampler, linear_repeat_sampler;
 
-            #define TILE 1
+            #define TILE 1.75
 
 			v2f vp(VertexData v) {
 				v2f i;
@@ -94,7 +94,7 @@ Shader "Custom/FFTWater" {
 				slope *= _NormalStrength;
 
 				float3 normal = normalize(float3(-slope.x, 1.0f, -slope.y));
-                //normal = normalize(UnityObjectToWorldNormal(normalize(normal)));
+                normal = normalize(UnityObjectToWorldNormal(normalize(normal)));
 
 				// normal = centralDifferenceNormal(i.worldPos, 0.01f);
 
