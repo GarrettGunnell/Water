@@ -343,21 +343,21 @@ void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
     _NormalTex[id.xy] = float4(dyxdyz, dxxdzz * _Lambda);
 
     float foam = _FoamTex[id.xy];
-    foam *= exp(-1.0f);
+    foam *= exp(-0.085f);
     foam = saturate(foam);
 
-    jacobian = max(0.0f, -(jacobian - 0.95f));
+    jacobian = max(0.0f, -(jacobian - 0.89f));
 
 
     if (jacobian > 0.0)
-        foam += 1.0f * jacobian;
+        foam += 0.55f * jacobian;
 
     _FoamTex[id.xy] = foam;
 }
 
 
 float gaussian(int x, int y) {
-    float _Spread = 2.0f;
+    float _Spread = 0.5f;
     float sigmaSqu = _Spread * _Spread;
     return (1 / sqrt(2 * PI * sigmaSqu)) * exp(-((x * x) + (y * y)) / (2 * sigmaSqu));
 }
@@ -369,7 +369,7 @@ void CS_AccumulateFoam(uint3 id : SV_DISPATCHTHREADID) {
     float foam = 0.0f;
     float kernelSum = 0.0f;
 
-    int _KernelSize = 3;
+    int _KernelSize = 1;
     float2 uv = (float2(id.xy)) / _N;
 
     for (int x = -_KernelSize; x <= _KernelSize; ++x) {

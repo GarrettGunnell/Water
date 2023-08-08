@@ -321,8 +321,8 @@ MonoBehaviour:
   waterShader: {fileID: 4800000, guid: 16bcf694f2309c143b77d97af3b9cc8d, type: 3}
   fftComputeShader: {fileID: 7200000, guid: 9b59da7d74bb689429dab3b1e55bec89, type: 3}
   atmosphere: {fileID: 963194230}
-  planeLength: 100
-  quadRes: 10
+  planeLength: 10
+  quadRes: 1
   lengthScale: 256
   seed: 0
   lowCutoff: 0.0001
@@ -337,16 +337,16 @@ MonoBehaviour:
     fetch: 1
     spreadBlend: 0
     swell: 0
-    peakEnhancement: 0
+    peakEnhancement: 1
     shortWavesFade: 0
   spectrum2:
     scale: 0
-    windSpeed: 0
+    windSpeed: 1
     windDirection: 0
-    fetch: 0
+    fetch: 1
     spreadBlend: 0
     swell: 0
-    peakEnhancement: 0
+    peakEnhancement: 1
     shortWavesFade: 0
   updateSpectrum: 0
   speed: 1
