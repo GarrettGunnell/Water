@@ -325,12 +325,29 @@ MonoBehaviour:
   quadRes: 10
   lengthScale: 256
   seed: 0
-  A: 15.9
-  wind: {x: 1, y: 1}
-  windSpeed: 57
+  lowCutoff: 0.0001
+  highCutoff: 9000
   gravity: 9.81
-  damping: 1
+  depth: 1000
   repeatTime: 200
+  spectrum1:
+    scale: 1
+    windSpeed: 1
+    windDirection: 1
+    fetch: 1
+    spreadBlend: 0
+    swell: 0
+    peakEnhancement: 0
+    shortWavesFade: 0
+  spectrum2:
+    scale: 0
+    windSpeed: 0
+    windDirection: 0
+    fetch: 0
+    spreadBlend: 0
+    swell: 0
+    peakEnhancement: 0
+    shortWavesFade: 0
   updateSpectrum: 0
   speed: 1
   lambda: {x: -1, y: -1}
@@ -349,7 +366,7 @@ MonoBehaviour:
   fresnelShininess: 5
   fresnelNormalStrength: 1
   tipColor: {r: 0, g: 0, b: 0, a: 0}
-  tipAttenuation: 1
+  foamThreshold: 0
 --- !u!1 &320027525
 GameObject:
   m_ObjectHideFlags: 0
@@ -816,7 +833,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe1b18386f62f2d4e8123ded415eace7, type: 3}
   m_Name: 

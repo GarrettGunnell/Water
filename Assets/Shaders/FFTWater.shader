@@ -56,19 +56,19 @@ Shader "Custom/FFTWater" {
 
 			float4x4 _CameraInvViewProjection;
 			sampler2D _CameraDepthTexture;
-            Texture2D _HeightTex, _SpectrumTex, _NormalTex;
+            Texture2D _HeightTex, _SpectrumTex, _NormalTex, _FoamTex;
             SamplerState point_repeat_sampler, linear_repeat_sampler;
 
-            #define TILE 0.5
+            #define TILE 1
 
 			v2f vp(VertexData v) {
 				v2f i;
                 i.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 i.normal = normalize(UnityObjectToWorldNormal(v.normal));
-				float4 heightDisplacement = _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * TILE + 0.01f, 0);
+				float3 displacement = _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * TILE, 0).rgb;
 
-                i.pos = UnityObjectToClipPos(v.vertex + float3(heightDisplacement.g,  heightDisplacement.r, heightDisplacement.b));
-                //i.pos = UnityObjectToClipPos(v.vertex);
+				v.vertex.xyz += mul(unity_WorldToObject, displacement.xyz);
+                i.pos = UnityObjectToClipPos(v.vertex);
                 i.uv = v.uv;
 				
 				return i;
@@ -85,8 +85,15 @@ Shader "Custom/FFTWater" {
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos);
                 float3 halfwayDir = normalize(lightDir + viewDir);
 
-                float height = _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE + 0.01f).r;
-				float3 normal = normalize(_NormalTex.SampleLevel(linear_repeat_sampler, i.uv * TILE + 0.01f, 0).rgb);
+                float height = _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE).y;
+				float jacobian = _FoamTex.Sample(linear_repeat_sampler, i.uv * TILE).r;
+
+				float4 derivatives = _NormalTex.Sample(linear_repeat_sampler, i.uv * TILE);
+				
+				float2 slope = derivatives.xy / (1 + abs(derivatives.zw));
+				slope *= _NormalStrength;
+
+				float3 normal = normalize(float3(-slope.x, 1.0f, -slope.y));
                 //normal = normalize(UnityObjectToWorldNormal(normalize(normal)));
 
 				// normal = centralDifferenceNormal(i.worldPos, 0.01f);
@@ -132,10 +139,8 @@ Shader "Custom/FFTWater" {
 				specular *= R;
 				
 
-
-				float3 tipColor = _TipColor * saturate(pow(max(0.0f, height / 7.0f), _TipAttenuation));
-
-				float3 output = _Ambient + diffuse + specular + fresnel + tipColor;
+				float3 output = _Ambient + diffuse + specular + fresnel;
+				output = lerp(output, _TipColor, saturate(jacobian));
 				
 				//return _HeightTex.Sample(linear_repeat_sampler, i.uv * TILE + 0.01f).r *0.15f + 0.5f;
                 //return _SpectrumTex.Sample(point_repeat_sampler, i.uv);

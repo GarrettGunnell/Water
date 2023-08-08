@@ -22,6 +22,35 @@ public class FFTWater : MonoBehaviour {
     private Vector3[] vertices;
     private Vector3[] normals;
 
+    public struct SpectrumSettings {
+        public float scale;
+        public float angle;
+        public float spreadBlend;
+        public float swell;
+        public float alpha;
+        public float peakOmega;
+        public float gamma;
+        public float shortWavesFade; 
+    }
+
+    SpectrumSettings[] spectrums = new SpectrumSettings[2];
+
+    [System.Serializable]
+    public struct DisplaySpectrumSettings {
+        [Range(0, 1)]
+        public float scale;
+        public float windSpeed;
+        [Range(0.0f, 360.0f)]
+        public float windDirection;
+        public float fetch;
+        [Range(0, 1)]
+        public float spreadBlend;
+        [Range(0, 1)]
+        public float swell;
+        public float peakEnhancement;
+        public float shortWavesFade;
+    }
+
     [Header("Spectrum Settings")]
     [Range(0, 2048)]
     public int lengthScale = 256;
@@ -29,22 +58,26 @@ public class FFTWater : MonoBehaviour {
     [Range(0, 100000)]
     public int seed = 0;
 
-    [Range(0.0f, 100.0f)]
-    public float A = 1.0f;
+    [Range(0.0f, 0.1f)]
+    public float lowCutoff = 0.0001f;
 
-    public Vector2 wind = new Vector2(1.0f, 1.0f);
-    
-    [Range(0.0f, 200.0f)]
-    public float windSpeed = 1.0f;
+    [Range(0.1f, 9000.0f)]
+    public float highCutoff = 9000.0f;
 
     [Range(0.0f, 20.0f)]
     public float gravity = 9.81f;
 
-    [Range(0.0f, 1000.0f)]
-    public float damping = 1.0f;
+    [Range(2.0f, 20.0f)]
+    public float depth = 20.0f;
 
     [Range(0.0f, 200.0f)]
     public float repeatTime = 200.0f;
+
+    [SerializeField]
+    public DisplaySpectrumSettings spectrum1;
+    
+    [SerializeField]
+    public DisplaySpectrumSettings spectrum2;
 
     public bool updateSpectrum = false;
 
@@ -97,8 +130,10 @@ public class FFTWater : MonoBehaviour {
     [ColorUsageAttribute(false, true)]
     public Color tipColor;
 
-    [Range(0.0f, 5.0f)]
-    public float tipAttenuation = 1.0f;
+    [Range(-10.0f, 10.0f)]
+    public float foamThreshold = 0.0f;
+
+
 
     private RenderTexture heightTex, 
                           normalTex, 
@@ -110,7 +145,10 @@ public class FFTWater : MonoBehaviour {
                           htildeSlopeXTex, 
                           htildeSlopeZTex, 
                           htildeDisplacementXTex, 
-                          htildeDisplacementZTex;
+                          htildeDisplacementZTex,
+                          foamTex;
+
+    private ComputeBuffer spectrumBuffer;
 
     private int N, logN, threadGroupsX, threadGroupsY;
 
@@ -132,6 +170,10 @@ public class FFTWater : MonoBehaviour {
 
     public RenderTexture GetTwiddleFactor() {
         return twiddleFactorTex;
+    }
+
+    public RenderTexture GetFoam() {
+        return foamTex;
     }
 
     private void CreateWaterPlane() {
@@ -179,7 +221,6 @@ public class FFTWater : MonoBehaviour {
 
     void CreateMaterial() {
         if (waterShader == null) return;
-        if (waterMaterial != null) return;
 
         waterMaterial = new Material(waterShader);
 
@@ -189,19 +230,46 @@ public class FFTWater : MonoBehaviour {
     }
 
     void SetFFTUniforms() {
-        Vector2 windDirection = wind;
-        windDirection.Normalize();
-        fftComputeShader.SetFloat("_A", A / 100000000);
-        fftComputeShader.SetVector("_Wind", windDirection * windSpeed);
         fftComputeShader.SetVector("_Lambda", lambda);
         fftComputeShader.SetFloat("_FrameTime", Time.time * speed);
+        fftComputeShader.SetFloat("_DeltaTime", Time.deltaTime);
         fftComputeShader.SetFloat("_Gravity", gravity);
         fftComputeShader.SetFloat("_RepeatTime", repeatTime);
-        fftComputeShader.SetFloat("_Damping", damping / 100000);
         fftComputeShader.SetInt("_N", N);
         fftComputeShader.SetInt("_Seed", seed);
         fftComputeShader.SetInt("_LengthScale", lengthScale);
         fftComputeShader.SetFloat("_NormalStrength", normalStrength);
+        fftComputeShader.SetFloat("_FoamThreshold", foamThreshold);
+        fftComputeShader.SetFloat("_Depth", depth);
+        fftComputeShader.SetFloat("_LowCutoff", lowCutoff);
+        fftComputeShader.SetFloat("_HighCutoff", highCutoff);
+    }
+
+    float JonswapAlpha(float fetch, float windSpeed) {
+        return 0.076f * Mathf.Pow(gravity * fetch / windSpeed / windSpeed, -0.22f);
+    }
+
+    float JonswapPeakFrequency(float fetch, float windSpeed) {
+        return 22 * Mathf.Pow(windSpeed * fetch / gravity / gravity, -0.33f);
+    }
+
+    void FillSpectrumStruct(DisplaySpectrumSettings displaySettings, ref SpectrumSettings computeSettings) {
+        computeSettings.scale = displaySettings.scale;
+        computeSettings.angle = displaySettings.windDirection / 180 * Mathf.PI;
+        computeSettings.spreadBlend = displaySettings.spreadBlend;
+        computeSettings.swell = Mathf.Clamp(displaySettings.swell, 0.01f, 1);
+        computeSettings.alpha = JonswapAlpha(displaySettings.fetch, displaySettings.windSpeed);
+        computeSettings.peakOmega = JonswapPeakFrequency(displaySettings.fetch, displaySettings.windSpeed);
+        computeSettings.gamma = displaySettings.peakEnhancement;
+        computeSettings.shortWavesFade = displaySettings.shortWavesFade;
+    }
+
+    void SetSpectrumBuffers() {
+        FillSpectrumStruct(spectrum1, ref spectrums[0]);
+        FillSpectrumStruct(spectrum2, ref spectrums[1]);
+
+        spectrumBuffer.SetData(spectrums);
+        fftComputeShader.SetBuffer(0, "_Spectrums", spectrumBuffer);
     }
 
     void InverseFFT(RenderTexture spectrumTex) {
@@ -247,7 +315,7 @@ public class FFTWater : MonoBehaviour {
         CreateMaterial();
         cam = GameObject.Find("Main Camera").GetComponent<Camera>();
 
-        N = 1024;
+        N = 512;
         threadGroupsX = Mathf.CeilToInt(N / 8.0f);
         threadGroupsY = Mathf.CeilToInt(N / 8.0f);
 
@@ -261,14 +329,19 @@ public class FFTWater : MonoBehaviour {
         pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
         heightTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         normalTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
+        foamTex = CreateRenderTex(N, N, RenderTextureFormat.RHalf);
+
+        spectrumBuffer = new ComputeBuffer(2, 8 * sizeof(float));
 
         SetFFTUniforms();
-        fftComputeShader.SetTexture(0, "_HeightTex", heightTex);
-        fftComputeShader.SetTexture(0, "_NormalTex", normalTex);
+        SetSpectrumBuffers();
+        // Compute initial JONSWAP spectrum
         fftComputeShader.SetTexture(0, "_InitialSpectrumTex", initialSpectrumTex);
         fftComputeShader.Dispatch(0, threadGroupsX, threadGroupsY, 1);
+        fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);
+        fftComputeShader.Dispatch(1, threadGroupsX, threadGroupsY, 1);
 
-        //Precompute Twiddle Factors for FFT
+        // Precompute Twiddle Factors for FFT
         logN = (int)Mathf.Log(N, 2);
         twiddleFactorTex = CreateRenderTex(logN, N, RenderTextureFormat.ARGBHalf);
 
@@ -287,7 +360,6 @@ public class FFTWater : MonoBehaviour {
         waterMaterial.SetFloat("_FresnelBias", fresnelBias);
         waterMaterial.SetFloat("_FresnelStrength", fresnelStrength);
         waterMaterial.SetFloat("_FresnelShininess", fresnelShininess);
-        waterMaterial.SetFloat("_TipAttenuation", tipAttenuation);
         waterMaterial.SetFloat("_NormalStrength", normalStrength);
         waterMaterial.SetFloat("_FresnelNormalStrength", fresnelNormalStrength);
         waterMaterial.SetFloat("_SpecularNormalStrength", specularNormalStrength);
@@ -295,16 +367,16 @@ public class FFTWater : MonoBehaviour {
 
         SetFFTUniforms();
         if (updateSpectrum) {
-            fftComputeShader.SetTexture(0, "_HeightTex", heightTex);
-            fftComputeShader.SetTexture(0, "_NormalTex", normalTex);
+            SetSpectrumBuffers();
             fftComputeShader.SetTexture(0, "_InitialSpectrumTex", initialSpectrumTex);
             fftComputeShader.Dispatch(0, threadGroupsX, threadGroupsY, 1);
+            fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);
+            fftComputeShader.Dispatch(1, threadGroupsX, threadGroupsY, 1);
         }
         
         if (useFFT) {
             // Progress Spectrum For FFT
             fftComputeShader.SetTexture(3, "_InitialSpectrumTex", initialSpectrumTex);
-            fftComputeShader.SetTexture(3, "_HTildeTex", htildeTex);
             fftComputeShader.SetTexture(3, "_HTildeSlopeXTex", htildeSlopeXTex);
             fftComputeShader.SetTexture(3, "_HTildeSlopeZTex", htildeSlopeZTex);
             fftComputeShader.SetTexture(3, "_HTildeDisplacementXTex", htildeDisplacementXTex);
@@ -312,20 +384,19 @@ public class FFTWater : MonoBehaviour {
             fftComputeShader.Dispatch(3, threadGroupsX, threadGroupsY, 1);
 
             // Compute FFT For Height
-            InverseFFT(htildeTex);
             InverseFFT(htildeSlopeXTex);
             InverseFFT(htildeSlopeZTex);
             InverseFFT(htildeDisplacementXTex);
             InverseFFT(htildeDisplacementZTex);
 
             // Assemble maps
-            fftComputeShader.SetTexture(8, "_HTildeTex", htildeTex);
             fftComputeShader.SetTexture(8, "_HTildeSlopeXTex", htildeSlopeXTex);
             fftComputeShader.SetTexture(8, "_HTildeSlopeZTex", htildeSlopeZTex);
             fftComputeShader.SetTexture(8, "_HTildeDisplacementXTex", htildeDisplacementXTex);
             fftComputeShader.SetTexture(8, "_HTildeDisplacementZTex", htildeDisplacementZTex);
             fftComputeShader.SetTexture(8, "_HeightTex", heightTex);
             fftComputeShader.SetTexture(8, "_NormalTex", normalTex);
+            fftComputeShader.SetTexture(8, "_FoamTex", foamTex);
             fftComputeShader.Dispatch(8, threadGroupsX, threadGroupsY, 1);
         } else {
             // Progress Spectrum For DFT
@@ -342,6 +413,7 @@ public class FFTWater : MonoBehaviour {
         waterMaterial.SetTexture("_HeightTex", heightTex);
         waterMaterial.SetTexture("_NormalTex", normalTex);
         waterMaterial.SetTexture("_SpectrumTex", progressedSpectrumTex);
+        waterMaterial.SetTexture("_FoamTex", foamTex);
 
         if (useTextureForFresnel) {
             waterMaterial.SetTexture("_EnvironmentMap", environmentTexture);
