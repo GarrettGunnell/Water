@@ -54,6 +54,9 @@ public class FFTWater : MonoBehaviour {
     [Header("Spectrum Settings")]
     [Range(0, 2048)]
     public int lengthScale = 256;
+    
+    [Range(0.01f, 200.0f)]
+    public float tile = 8.0f;
 
     [Range(0, 100000)]
     public int seed = 0;
@@ -378,6 +381,7 @@ public class FFTWater : MonoBehaviour {
         waterMaterial.SetFloat("_FresnelNormalStrength", fresnelNormalStrength);
         waterMaterial.SetFloat("_SpecularNormalStrength", specularNormalStrength);
         waterMaterial.SetInt("_UseEnvironmentMap", useTextureForFresnel ? 1 : 0);
+        waterMaterial.SetFloat("_Tile", tile);
 
         SetFFTUniforms();
         if (updateSpectrum) {

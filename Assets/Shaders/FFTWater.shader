@@ -19,6 +19,7 @@ Shader "Custom/FFTWater" {
 
             return edgeLength * _ScreenParams.y / (_TessellationEdgeLength * (pow(viewDistance * 0.5f, 1.2f)));
         }
+		
         bool TriangleIsBelowClipPlane(float3 p0, float3 p1, float3 p2, int planeIndex, float bias) {
             float4 plane = unity_CameraWorldClipPlanes[planeIndex];
 
@@ -95,7 +96,7 @@ Shader "Custom/FFTWater" {
             Texture2D _HeightTex, _SpectrumTex, _NormalTex, _FoamTex;
             SamplerState point_repeat_sampler, linear_repeat_sampler;
 
-            #define TILE 16.0
+            float _Tile;
 
 			TessellationControlPoint dummyvp(VertexData v) {
 				TessellationControlPoint p;
@@ -108,7 +109,7 @@ Shader "Custom/FFTWater" {
 			v2g vp(VertexData v) {
 				v2g g;
                 g.worldPos = mul(unity_ObjectToWorld, v.vertex);
-				float3 displacement = _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * TILE, 0).rgb;
+				float3 displacement = _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * _Tile, 0).rgb;
 
 				v.vertex.xyz += mul(unity_WorldToObject, displacement.xyz);
                 g.pos = UnityObjectToClipPos(v.vertex);
@@ -192,10 +193,10 @@ Shader "Custom/FFTWater" {
                 float3 viewDir = normalize(_WorldSpaceCameraPos - f.data.worldPos);
                 float3 halfwayDir = normalize(lightDir + viewDir);
 
-                float height = _HeightTex.Sample(linear_repeat_sampler, f.data.uv * TILE).y;
-				float jacobian = _FoamTex.Sample(linear_repeat_sampler, f.data.uv * TILE).r;
+                float height = _HeightTex.Sample(linear_repeat_sampler, f.data.uv * _Tile).y;
+				float jacobian = _FoamTex.Sample(linear_repeat_sampler, f.data.uv * _Tile).r;
 
-				float4 derivatives = _NormalTex.Sample(linear_repeat_sampler, f.data.uv * TILE);
+				float4 derivatives = _NormalTex.Sample(linear_repeat_sampler, f.data.uv * _Tile);
 				
 				float2 slope = derivatives.xy / (1 + abs(derivatives.zw));
 				slope *= _NormalStrength;
@@ -249,8 +250,6 @@ Shader "Custom/FFTWater" {
 				float3 output = _Ambient + diffuse + specular + fresnel;
 				output = lerp(output, _TipColor, saturate(jacobian));
 				
-				//return _HeightTex.Sample(linear_repeat_sampler, f.data.uv * TILE + 0.01f).r *0.15f + 0.5f;
-                //return _SpectrumTex.Sample(point_repeat_sampler, f.data.uv);
 				return float4(output, 1.0f);
 			}
 
