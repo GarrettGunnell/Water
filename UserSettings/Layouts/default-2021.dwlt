@@ -19,7 +19,7 @@ MonoBehaviour:
     width: 1920
     height: 997
   m_ShowMode: 4
-  m_Title: Inspector
+  m_Title: Game
   m_RootView: {fileID: 4}
   m_MinSize: {x: 875, y: 300}
   m_MaxSize: {x: 10000, y: 10000}
@@ -275,9 +275,9 @@ MonoBehaviour:
   m_SceneHierarchy:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
-      m_SelectedIDs: 585c0000
-      m_LastClickedID: 23640
-      m_ExpandedIDs: aaf7ffff38fbffff
+      m_SelectedIDs: 665b0000
+      m_LastClickedID: 23398
+      m_ExpandedIDs: 38fbffff
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -421,7 +421,7 @@ MonoBehaviour:
       containerId: overlay-container--right
       floating: 0
       collapsed: 0
-      displayed: 0
+      displayed: 1
       snapOffset: {x: 0, y: 0}
       snapOffsetDelta: {x: 0, y: 0}
       snapCorner: 0
@@ -559,9 +559,9 @@ MonoBehaviour:
   m_PlayAudio: 0
   m_AudioPlay: 0
   m_Position:
-    m_Target: {x: -959.1664, y: 9.029006, z: -949.5297}
+    m_Target: {x: -932.23706, y: 6.7919097, z: -975.48236}
     speed: 2
-    m_Value: {x: -959.1664, y: 9.029006, z: -949.5297}
+    m_Value: {x: -932.23706, y: 6.7919097, z: -975.48236}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 2
@@ -608,9 +608,9 @@ MonoBehaviour:
     m_GridAxis: 1
     m_gridOpacity: 0.5
   m_Rotation:
-    m_Target: {x: 0.0658775, y: 0.36397758, z: -0.025815127, w: 0.928765}
+    m_Target: {x: 0.08122513, y: -0.0014950475, z: 0.00013181758, w: 0.9967414}
     speed: 2
-    m_Value: {x: 0.065874524, y: 0.36396113, z: -0.025813961, w: 0.92872304}
+    m_Value: {x: 0.08122134, y: -0.0014949777, z: 0.00013181144, w: 0.996695}
   m_Size:
     m_Target: 6.284534
     speed: 2
@@ -673,7 +673,7 @@ MonoBehaviour:
   m_ShowGizmos: 0
   m_TargetDisplay: 0
   m_ClearColor: {r: 0, g: 0, b: 0, a: 0}
-  m_TargetSize: {x: 1530, y: 905}
+  m_TargetSize: {x: 512, y: 512}
   m_TextureFilterMode: 0
   m_TextureHideFlags: 61
   m_RenderIMGUI: 1
@@ -682,16 +682,16 @@ MonoBehaviour:
   m_VSyncEnabled: 0
   m_Gizmos: 0
   m_Stats: 1
-  m_SelectedSizes: 00000000000000000000000000000000000000000000000000000000000000000000000000000000
+  m_SelectedSizes: 0a000000000000000000000000000000000000000000000000000000000000000000000000000000
   m_ZoomArea:
     m_HRangeLocked: 0
     m_VRangeLocked: 0
     hZoomLockedByDefault: 0
     vZoomLockedByDefault: 0
-    m_HBaseRangeMin: -765
-    m_HBaseRangeMax: 765
-    m_VBaseRangeMin: -452.5
-    m_VBaseRangeMax: 452.5
+    m_HBaseRangeMin: -256
+    m_HBaseRangeMax: 256
+    m_VBaseRangeMin: -256
+    m_VBaseRangeMax: 256
     m_HAllowExceedBaseRangeMin: 1
     m_HAllowExceedBaseRangeMax: 1
     m_VAllowExceedBaseRangeMin: 1

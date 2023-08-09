@@ -152,7 +152,6 @@ public class FFTWater : MonoBehaviour {
                           normalTex, 
                           initialSpectrumTex, 
                           progressedSpectrumTex, 
-                          twiddleFactorTex, 
                           pingPongTex, 
                           htildeTex, 
                           htildeSlopeTex, 
@@ -181,10 +180,6 @@ public class FFTWater : MonoBehaviour {
 
     public RenderTexture GetDisplacementSpectrum() {
         return htildeDisplacementTex;
-    }
-
-    public RenderTexture GetTwiddleFactor() {
-        return twiddleFactorTex;
     }
 
     public RenderTexture GetFoam() {
@@ -294,30 +289,27 @@ public class FFTWater : MonoBehaviour {
     void InverseFFT(RenderTexture spectrumTex) {
         bool pingPong = false;
 
-        fftComputeShader.SetTexture(5, "_PrecomputedData", twiddleFactorTex);
+        fftComputeShader.SetTexture(4, "_Buffer0", spectrumTex);
+        fftComputeShader.SetTexture(4, "_Buffer1", pingPongTex);
         fftComputeShader.SetTexture(5, "_Buffer0", spectrumTex);
         fftComputeShader.SetTexture(5, "_Buffer1", pingPongTex);
         for (int i = 0; i < logN; ++i) {
             pingPong = !pingPong;
-            fftComputeShader.SetInt("_Step", i);
-            fftComputeShader.SetBool("_PingPong", pingPong);
-            fftComputeShader.Dispatch(5, threadGroupsX, threadGroupsY, 1);
+            fftComputeShader.SetInt("_Step", i);        
+            fftComputeShader.Dispatch(pingPong ? 4 : 5, threadGroupsX, threadGroupsY, 1);
         }
 
-        fftComputeShader.SetTexture(6, "_PrecomputedData", twiddleFactorTex);
         fftComputeShader.SetTexture(6, "_Buffer0", spectrumTex);
         fftComputeShader.SetTexture(6, "_Buffer1", pingPongTex);
+        fftComputeShader.SetTexture(7, "_Buffer0", spectrumTex);
+        fftComputeShader.SetTexture(7, "_Buffer1", pingPongTex);
         for (int i = 0; i < logN; ++i) {
             pingPong = !pingPong;
             fftComputeShader.SetInt("_Step", i);
-            fftComputeShader.SetBool("_PingPong", pingPong);
-            fftComputeShader.Dispatch(6, threadGroupsX, threadGroupsY, 1);
+            fftComputeShader.Dispatch(pingPong ? 6 : 7, threadGroupsX, threadGroupsY, 1);
         }
 
         if (pingPong) Graphics.Blit(pingPongTex, spectrumTex);
-
-        //fftComputeShader.SetTexture(7, "_Buffer0", spectrumTex);
-        //fftComputeShader.Dispatch(7, threadGroupsX, threadGroupsY, 1);
     }
 
     RenderTexture CreateRenderTex(int width, int height, RenderTextureFormat format) {
@@ -335,6 +327,7 @@ public class FFTWater : MonoBehaviour {
         cam = GameObject.Find("Main Camera").GetComponent<Camera>();
 
         N = 256;
+        logN = (int)Mathf.Log(N, 2.0f);
         threadGroupsX = Mathf.CeilToInt(N / 8.0f);
         threadGroupsY = Mathf.CeilToInt(N / 8.0f);
 
@@ -357,14 +350,6 @@ public class FFTWater : MonoBehaviour {
         fftComputeShader.Dispatch(0, threadGroupsX, threadGroupsY, 1);
         fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);
         fftComputeShader.Dispatch(1, threadGroupsX, threadGroupsY, 1);
-
-        // Precompute Twiddle Factors for FFT
-        logN = (int)Mathf.Log(N, 2);
-        twiddleFactorTex = CreateRenderTex(8, N, RenderTextureFormat.ARGBHalf);
-
-        fftComputeShader.SetTexture(4, "_PrecomputeBuffer", twiddleFactorTex);
-        fftComputeShader.Dispatch(4, 256 / 8, (N / 2) / 8, 1);
-
     }
 
     void Update() {
