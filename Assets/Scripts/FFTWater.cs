@@ -316,8 +316,8 @@ public class FFTWater : MonoBehaviour {
 
         if (pingPong) Graphics.Blit(pingPongTex, spectrumTex);
 
-        fftComputeShader.SetTexture(7, "_Buffer0", spectrumTex);
-        fftComputeShader.Dispatch(7, threadGroupsX, threadGroupsY, 1);
+        //fftComputeShader.SetTexture(7, "_Buffer0", spectrumTex);
+        //fftComputeShader.Dispatch(7, threadGroupsX, threadGroupsY, 1);
     }
 
     RenderTexture CreateRenderTex(int width, int height, RenderTextureFormat format) {

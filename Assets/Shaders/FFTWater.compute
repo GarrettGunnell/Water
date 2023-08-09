@@ -357,11 +357,14 @@ void CS_Permute(uint3 id : SV_DISPATCHTHREADID) {
     _Buffer0[id.xy] = _Buffer0[id.xy] * (1.0f - 2.0f * ((id.x + id.y) % 2));
 }
 
+float4 Permute(float4 data, float2 id) {
+    return data * (1.0f - 2.0f * ((id.x + id.y) % 2));
+}
 
 [numthreads(8, 8, 1)]
 void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
-    float4 htildeSlope = _HTildeSlopeTex[id.xy];
-    float4 htildeDisplacement = _HTildeDisplacementTex[id.xy];
+    float4 htildeSlope = Permute(_HTildeSlopeTex[id.xy], id);
+    float4 htildeDisplacement = Permute(_HTildeDisplacementTex[id.xy], id);
 
     float2 dxdz = htildeSlope.rg;
     float2 dydxz = htildeSlope.ba;
