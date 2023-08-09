@@ -300,7 +300,7 @@ Transform:
   m_GameObject: {fileID: 19044808}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 10, y: 1, z: 10}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -321,36 +321,36 @@ MonoBehaviour:
   waterShader: {fileID: 4800000, guid: 16bcf694f2309c143b77d97af3b9cc8d, type: 3}
   fftComputeShader: {fileID: 7200000, guid: 9b59da7d74bb689429dab3b1e55bec89, type: 3}
   atmosphere: {fileID: 963194230}
-  planeLength: 10
-  quadRes: 1
+  planeLength: 200
+  quadRes: 2
   lengthScale: 256
   seed: 0
   lowCutoff: 0.0001
   highCutoff: 9000
   gravity: 9.81
-  depth: 1000
+  depth: 20
   repeatTime: 200
   spectrum1:
-    scale: 1
-    windSpeed: 1
-    windDirection: 1
-    fetch: 1
-    spreadBlend: 0
+    scale: 0.321
+    windSpeed: 1.96
+    windDirection: 227
+    fetch: 100000000
+    spreadBlend: 0.842
     swell: 0
     peakEnhancement: 1
-    shortWavesFade: 0
+    shortWavesFade: 0.0001
   spectrum2:
-    scale: 0
-    windSpeed: 1
-    windDirection: 0
-    fetch: 1
-    spreadBlend: 0
-    swell: 0
+    scale: 0.321
+    windSpeed: 24.9
+    windDirection: 201
+    fetch: 10
+    spreadBlend: 0.321
+    swell: 1
     peakEnhancement: 1
-    shortWavesFade: 0
+    shortWavesFade: 0.0001
   updateSpectrum: 0
   speed: 1
-  lambda: {x: -1, y: -1}
+  lambda: {x: 1, y: 1}
   useFFT: 1
   normalStrength: 1
   ambient: {r: 0, g: 0, b: 0, a: 0}
@@ -709,7 +709,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 1000
+  far clip plane: 2000
   field of view: 60
   orthographic: 0
   orthographic size: 5

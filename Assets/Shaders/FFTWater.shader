@@ -95,7 +95,7 @@ Shader "Custom/FFTWater" {
             Texture2D _HeightTex, _SpectrumTex, _NormalTex, _FoamTex;
             SamplerState point_repeat_sampler, linear_repeat_sampler;
 
-            #define TILE 6.0
+            #define TILE 16.0
 
 			TessellationControlPoint dummyvp(VertexData v) {
 				TessellationControlPoint p;

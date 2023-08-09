@@ -19,10 +19,11 @@ Texture2D<float2> _PingTex;
 
 RWTexture2D<float2> _HTildeTex, _HTildeSlopeXTex, _HTildeSlopeZTex, _HTildeDisplacementXTex, _HTildeDisplacementZTex;
 
-float _FrameTime, _DeltaTime, _A, _Gravity, _RepeatTime, _Damping, _FoamThreshold, _Depth, _LowCutoff, _HighCutoff;
+float _FrameTime, _DeltaTime, _A, _Gravity, _RepeatTime, _Damping, _Depth, _LowCutoff, _HighCutoff;
 int _Seed;
 float2 _Wind, _Lambda, _NormalStrength;
 uint _N, _LengthScale;
+float _FoamBias, _FoamDecayRate, _FoamAdd, _FoamThreshold;
 
 float2 ComplexMult(float2 a, float2 b) {
     return float2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
@@ -339,18 +340,18 @@ void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
 
     float3 displacement = float3(_Lambda.x * dxdz.x, dydxz.x, _Lambda.y * dxdz.y);
 
-    _HeightTex[id.xy] = float4(displacement, max(0.0f, -(jacobian + 1.0f)));
+    _HeightTex[id.xy] = float4(displacement, 0.0f);
     _NormalTex[id.xy] = float4(dyxdyz, dxxdzz * _Lambda);
 
     float foam = _FoamTex[id.xy];
-    foam *= exp(-0.085f);
+    foam *= exp(-_FoamDecayRate);
     foam = saturate(foam);
 
-    jacobian = max(0.0f, -(jacobian - 0.89f));
+    jacobian = max(0.0f, -(jacobian - _FoamBias));
 
 
-    if (jacobian > 0.0)
-        foam += 0.55f * jacobian;
+    if (jacobian > _FoamThreshold)
+        foam += _FoamAdd * jacobian;
 
     _FoamTex[id.xy] = foam;
 }
@@ -370,8 +371,8 @@ void CS_AccumulateFoam(uint3 id : SV_DISPATCHTHREADID) {
     float kernelSum = 0.0f;
 
     int _KernelSize = 1;
-    float2 uv = (float2(id.xy)) / _N;
-
+    float2 uv = ((float2(id.xy)) / _N) % _N;
+    /*
     for (int x = -_KernelSize; x <= _KernelSize; ++x) {
         for (int y = -_KernelSize; y <= _KernelSize; ++y) {
             int2 uv = (id.xy + int2(x, y)) % _N;
@@ -379,6 +380,6 @@ void CS_AccumulateFoam(uint3 id : SV_DISPATCHTHREADID) {
             kernelSum += gaussian(x, y);
         }
     }
-    
-    _FoamTex[id.xy] = foam / kernelSum;
+    */
+    _FoamTex[id.xy] = _PingTex[id.xy].r;
 }

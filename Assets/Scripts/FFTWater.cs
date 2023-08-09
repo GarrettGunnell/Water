@@ -130,8 +130,18 @@ public class FFTWater : MonoBehaviour {
     [ColorUsageAttribute(false, true)]
     public Color tipColor;
 
+    [Header("Foam Settings")]
+    [Range(-2.0f, 2.0f)]
+    public float foamBias = -0.5f;
+
     [Range(-10.0f, 10.0f)]
     public float foamThreshold = 0.0f;
+
+    [Range(0.0f, 1.0f)]
+    public float foamAdd = 0.5f;
+
+    [Range(0.0f, 1.0f)]
+    public float foamDecayRate = 0.05f;
 
 
 
@@ -243,6 +253,10 @@ public class FFTWater : MonoBehaviour {
         fftComputeShader.SetFloat("_Depth", depth);
         fftComputeShader.SetFloat("_LowCutoff", lowCutoff);
         fftComputeShader.SetFloat("_HighCutoff", highCutoff);
+        fftComputeShader.SetFloat("_FoamBias", foamBias);
+        fftComputeShader.SetFloat("_FoamDecayRate", foamDecayRate);
+        fftComputeShader.SetFloat("_FoamThreshold", foamThreshold);
+        fftComputeShader.SetFloat("_FoamAdd", foamAdd);
     }
 
     float JonswapAlpha(float fetch, float windSpeed) {
@@ -399,11 +413,11 @@ public class FFTWater : MonoBehaviour {
             fftComputeShader.SetTexture(8, "_FoamTex", foamTex);
             fftComputeShader.Dispatch(8, threadGroupsX, threadGroupsY, 1);
 
-            Graphics.Blit(foamTex, pingPongTex);
+            //Graphics.Blit(foamTex, pingPongTex);
 
-            fftComputeShader.SetTexture(9, "_PingTex", pingPongTex);
-            fftComputeShader.SetTexture(9, "_FoamTex", foamTex);
-            fftComputeShader.Dispatch(9, threadGroupsX, threadGroupsY, 1);
+            //fftComputeShader.SetTexture(9, "_PingTex", pingPongTex);
+            //fftComputeShader.SetTexture(9, "_FoamTex", foamTex);
+            //fftComputeShader.Dispatch(9, threadGroupsX, threadGroupsY, 1);
         } else {
             // Progress Spectrum For DFT
             fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);

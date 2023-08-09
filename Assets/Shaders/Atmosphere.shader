@@ -84,7 +84,7 @@ Shader "Hidden/Atmosphere" {
 
                 sky = (sky + sky2);
 
-                if (depth == 0) col.rgb = sky;
+                //if (depth == 0) col.rgb = sky;
 
                 float height = min(_FogHeight, worldPos.y) / _FogHeight;
                 height = pow(saturate(height), 1.0f / _FogAttenuation);
