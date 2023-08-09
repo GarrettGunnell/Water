@@ -155,10 +155,8 @@ public class FFTWater : MonoBehaviour {
                           twiddleFactorTex, 
                           pingPongTex, 
                           htildeTex, 
-                          htildeSlopeXTex, 
-                          htildeSlopeZTex, 
-                          htildeDisplacementXTex, 
-                          htildeDisplacementZTex,
+                          htildeSlopeTex, 
+                          htildeDisplacementTex,
                           foamTex;
 
     private ComputeBuffer spectrumBuffer;
@@ -177,8 +175,12 @@ public class FFTWater : MonoBehaviour {
         return initialSpectrumTex;
     }
 
-    public RenderTexture GetProgressedSpectrum() {
-        return progressedSpectrumTex;
+    public RenderTexture GetSlope() {
+        return htildeSlopeTex;
+    }
+
+    public RenderTexture GetDisplacementSpectrum() {
+        return htildeDisplacementTex;
     }
 
     public RenderTexture GetTwiddleFactor() {
@@ -339,11 +341,9 @@ public class FFTWater : MonoBehaviour {
         initialSpectrumTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         progressedSpectrumTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
         htildeTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
-        htildeSlopeXTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
-        htildeSlopeZTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
-        htildeDisplacementXTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
-        htildeDisplacementZTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
-        pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
+        htildeSlopeTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
+        htildeDisplacementTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
+        pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         heightTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         normalTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         foamTex = CreateRenderTex(N, N, RenderTextureFormat.RHalf);
@@ -395,23 +395,17 @@ public class FFTWater : MonoBehaviour {
         if (useFFT) {
             // Progress Spectrum For FFT
             fftComputeShader.SetTexture(3, "_InitialSpectrumTex", initialSpectrumTex);
-            fftComputeShader.SetTexture(3, "_HTildeSlopeXTex", htildeSlopeXTex);
-            fftComputeShader.SetTexture(3, "_HTildeSlopeZTex", htildeSlopeZTex);
-            fftComputeShader.SetTexture(3, "_HTildeDisplacementXTex", htildeDisplacementXTex);
-            fftComputeShader.SetTexture(3, "_HTildeDisplacementZTex", htildeDisplacementZTex);
+            fftComputeShader.SetTexture(3, "_HTildeSlopeTex", htildeSlopeTex);
+            fftComputeShader.SetTexture(3, "_HTildeDisplacementTex", htildeDisplacementTex);
             fftComputeShader.Dispatch(3, threadGroupsX, threadGroupsY, 1);
 
             // Compute FFT For Height
-            InverseFFT(htildeSlopeXTex);
-            InverseFFT(htildeSlopeZTex);
-            InverseFFT(htildeDisplacementXTex);
-            InverseFFT(htildeDisplacementZTex);
+            InverseFFT(htildeSlopeTex);
+            InverseFFT(htildeDisplacementTex);
 
             // Assemble maps
-            fftComputeShader.SetTexture(8, "_HTildeSlopeXTex", htildeSlopeXTex);
-            fftComputeShader.SetTexture(8, "_HTildeSlopeZTex", htildeSlopeZTex);
-            fftComputeShader.SetTexture(8, "_HTildeDisplacementXTex", htildeDisplacementXTex);
-            fftComputeShader.SetTexture(8, "_HTildeDisplacementZTex", htildeDisplacementZTex);
+            fftComputeShader.SetTexture(8, "_HTildeSlopeTex", htildeSlopeTex);
+            fftComputeShader.SetTexture(8, "_HTildeDisplacementTex", htildeDisplacementTex);
             fftComputeShader.SetTexture(8, "_HeightTex", heightTex);
             fftComputeShader.SetTexture(8, "_NormalTex", normalTex);
             fftComputeShader.SetTexture(8, "_FoamTex", foamTex);
@@ -436,7 +430,6 @@ public class FFTWater : MonoBehaviour {
         }
         waterMaterial.SetTexture("_HeightTex", heightTex);
         waterMaterial.SetTexture("_NormalTex", normalTex);
-        waterMaterial.SetTexture("_SpectrumTex", progressedSpectrumTex);
         waterMaterial.SetTexture("_FoamTex", foamTex);
 
         if (useTextureForFresnel) {

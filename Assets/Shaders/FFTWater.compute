@@ -17,7 +17,8 @@ RWTexture2D<float4> _HeightTex, _NormalTex;
 RWTexture2D<float> _FoamTex;
 Texture2D<float2> _PingTex;
 
-RWTexture2D<float2> _HTildeTex, _HTildeSlopeXTex, _HTildeSlopeZTex, _HTildeDisplacementXTex, _HTildeDisplacementZTex;
+RWTexture2D<float2> _HTildeTex;
+RWTexture2D<float4> _HTildeSlopeTex, _HTildeDisplacementTex;
 
 float _FrameTime, _DeltaTime, _A, _Gravity, _RepeatTime, _Damping, _Depth, _LowCutoff, _HighCutoff;
 int _Seed;
@@ -246,10 +247,14 @@ void CS_UpdateSpectrumForFFT(uint3 id : SV_DISPATCHTHREADID) {
     float2 displacementY_dz = ih * K.y;
     float2 displacementZ_dz = -htilde * K.y * K.y * kMagRcp;
 
-    _HTildeSlopeXTex[id.xy] = float2(displacementX.x - displacementZ.y, displacementX.y + displacementZ.x);
-    _HTildeSlopeZTex[id.xy] = float2(displacementY.x - displacementZ_dx.y, displacementY.y + displacementZ_dx.x);
-    _HTildeDisplacementXTex[id.xy] = float2(displacementY_dx.x - displacementY_dz.y, displacementY_dx.y + displacementY_dz.x);
-    _HTildeDisplacementZTex[id.xy] = float2(displacementX_dx.x - displacementZ_dz.y, displacementX_dx.y + displacementZ_dz.x);
+    float2 htildeSlopeX = float2(displacementX.x - displacementZ.y, displacementX.y + displacementZ.x);
+    float2 htildeSlopeZ = float2(displacementY.x - displacementZ_dx.y, displacementY.y + displacementZ_dx.x);
+
+    float2 htildeDisplacementX = float2(displacementY_dx.x - displacementY_dz.y, displacementY_dx.y + displacementY_dz.x);
+    float2 htildeDisplacementZ = float2(displacementX_dx.x - displacementZ_dz.y, displacementX_dx.y + displacementZ_dz.x);
+
+    _HTildeSlopeTex[id.xy] = float4(htildeSlopeX, htildeSlopeZ);
+    _HTildeDisplacementTex[id.xy] = float4(htildeDisplacementX, htildeDisplacementZ);
 }
 
 float2 ComplexExp(float2 a) {
@@ -258,8 +263,8 @@ float2 ComplexExp(float2 a) {
 
 RWTexture2D<float4> _PrecomputeBuffer;
 Texture2D<float4> _PrecomputedData;
-RWTexture2D<float2> _Buffer0;
-RWTexture2D<float2> _Buffer1;
+RWTexture2D<float4> _Buffer0;
+RWTexture2D<float4> _Buffer1;
 bool _PingPong;
 uint _Step;
 
@@ -279,23 +284,29 @@ void CS_HorizontalStepInverseFFT(uint3 id : SV_DISPATCHTHREADID) {
 
     uint2 inputsIndices = (uint2)data.ba;
 
-    float2 x = 0.0f;
-    float2 y = 0.0f;
+    float4 x = 0.0f;
+    float4 y = 0.0f;
 
     if (_PingPong) {
-        x = _Buffer0[uint2(inputsIndices.x, id.y)].rg;
-        y = _Buffer0[uint2(inputsIndices.y, id.y)].rg;
+        x = _Buffer0[uint2(inputsIndices.x, id.y)];
+        y = _Buffer0[uint2(inputsIndices.y, id.y)];
     } else {
-        x = _Buffer1[uint2(inputsIndices.x, id.y)].rg;
-        y = _Buffer1[uint2(inputsIndices.y, id.y)].rg;
+        x = _Buffer1[uint2(inputsIndices.x, id.y)];
+        y = _Buffer1[uint2(inputsIndices.y, id.y)];
     }
 
-    float2 output = x + ComplexMult(float2(data.r, -data.g), y);
+    float2 x1 = x.rg;
+    float2 y1 = y.rg;
+    float2 x2 = x.ba;
+    float2 y2 = y.ba;
+
+    float2 output1 = x1 + ComplexMult(float2(data.r, -data.g), y1);
+    float2 output2 = x2 + ComplexMult(float2(data.r, -data.g), y2);
 
     if (_PingPong)
-        _Buffer1[id.xy] = float4(output, 0, 0);
+        _Buffer1[id.xy] = float4(output1, output2);
     else
-        _Buffer0[id.xy] = float4(output, 0, 0);
+        _Buffer0[id.xy] = float4(output1, output2);
 }
 
 [numthreads(8,8,1)]
@@ -304,23 +315,29 @@ void CS_VerticalStepInverseFFT(uint3 id : SV_DISPATCHTHREADID) {
 
     uint2 inputsIndices = (uint2)data.ba;
 
-    float2 x = 0.0f;
-    float2 y = 0.0f;
+    float4 x = 0.0f;
+    float4 y = 0.0f;
 
     if (_PingPong) {
-        x = _Buffer0[uint2(id.x, inputsIndices.x)].rg;
-        y = _Buffer0[uint2(id.x, inputsIndices.y)].rg;
+        x = _Buffer0[uint2(id.x, inputsIndices.x)];
+        y = _Buffer0[uint2(id.x, inputsIndices.y)];
     } else {
-        x = _Buffer1[uint2(id.x, inputsIndices.x)].rg;
-        y = _Buffer1[uint2(id.x, inputsIndices.y)].rg;
+        x = _Buffer1[uint2(id.x, inputsIndices.x)];
+        y = _Buffer1[uint2(id.x, inputsIndices.y)];
     }
 
-    float2 output = x + ComplexMult(float2(data.r, -data.g), y);
+    float2 x1 = x.rg;
+    float2 y1 = y.rg;
+    float2 x2 = x.ba;
+    float2 y2 = y.ba;
+
+    float2 output1 = x1 + ComplexMult(float2(data.r, -data.g), y1);
+    float2 output2 = x2 + ComplexMult(float2(data.r, -data.g), y2);
 
     if (_PingPong)
-        _Buffer1[id.xy] = float4(output, 0, 0);
+        _Buffer1[id.xy] = float4(output1, output2);
     else
-        _Buffer0[id.xy] = float4(output, 0, 0);
+        _Buffer0[id.xy] = float4(output1, output2);
 }
 
 [numthreads(8, 8, 1)]
@@ -331,10 +348,13 @@ void CS_Permute(uint3 id : SV_DISPATCHTHREADID) {
 
 [numthreads(8, 8, 1)]
 void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
-    float2 dxdz = _HTildeSlopeXTex[id.xy];
-    float2 dydxz = _HTildeSlopeZTex[id.xy];
-    float2 dyxdyz = _HTildeDisplacementXTex[id.xy];
-    float2 dxxdzz = _HTildeDisplacementZTex[id.xy];
+    float4 htildeSlope = _HTildeSlopeTex[id.xy];
+    float4 htildeDisplacement = _HTildeDisplacementTex[id.xy];
+
+    float2 dxdz = htildeSlope.rg;
+    float2 dydxz = htildeSlope.ba;
+    float2 dyxdyz = htildeDisplacement.rg;
+    float2 dxxdzz = htildeDisplacement.ba;
     
     float jacobian = (1.0f + _Lambda.x * dxxdzz.x) * (1.0f + _Lambda.y * dxxdzz.y) - _Lambda.x * _Lambda.y * dydxz.y * dydxz.y;
 
