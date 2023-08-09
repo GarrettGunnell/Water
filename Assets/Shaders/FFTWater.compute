@@ -278,9 +278,21 @@ void CS_PrecomputeTwiddleFactorsAndInputIndices(uint3 id : SV_DISPATCHTHREADID) 
     _PrecomputeBuffer[uint2(id.x, id.y + _N / 2)] = float4(-twiddle, i, i + b);
 }
 
+float4 ComputeTwiddleFactorAndInputIndices(uint2 id) {
+    uint b = _N >> (id.x + 1);
+    float2 mult = 2 * PI * float2(0.0f, 1.0f) / _N;
+    uint i = (2 * b * (id.y / b) + id.y % b) % _N;
+    float2 twiddle = ComplexExp(-mult * ((id.y / b) * b));
+
+
+    return float4(twiddle, i, i + b);
+}
+
 [numthreads(8,8,1)]
 void CS_HorizontalStepInverseFFT(uint3 id : SV_DISPATCHTHREADID) {
-    float4 data = _PrecomputedData[uint2(_Step, id.x)];
+    float4 data = ComputeTwiddleFactorAndInputIndices(uint2(_Step, id.x));
+
+     //data = _PrecomputedData[uint2(_Step, id.x)];
 
     uint2 inputsIndices = (uint2)data.ba;
 
@@ -311,7 +323,7 @@ void CS_HorizontalStepInverseFFT(uint3 id : SV_DISPATCHTHREADID) {
 
 [numthreads(8,8,1)]
 void CS_VerticalStepInverseFFT(uint3 id : SV_DISPATCHTHREADID) {
-    float4 data = _PrecomputedData[uint2(_Step, id.y)];
+    float4 data = ComputeTwiddleFactorAndInputIndices(uint2(_Step, id.y));
 
     uint2 inputsIndices = (uint2)data.ba;
 

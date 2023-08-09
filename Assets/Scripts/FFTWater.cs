@@ -334,7 +334,7 @@ public class FFTWater : MonoBehaviour {
         CreateMaterial();
         cam = GameObject.Find("Main Camera").GetComponent<Camera>();
 
-        N = 512;
+        N = 256;
         threadGroupsX = Mathf.CeilToInt(N / 8.0f);
         threadGroupsY = Mathf.CeilToInt(N / 8.0f);
 
@@ -360,10 +360,10 @@ public class FFTWater : MonoBehaviour {
 
         // Precompute Twiddle Factors for FFT
         logN = (int)Mathf.Log(N, 2);
-        twiddleFactorTex = CreateRenderTex(logN, N, RenderTextureFormat.ARGBHalf);
+        twiddleFactorTex = CreateRenderTex(8, N, RenderTextureFormat.ARGBHalf);
 
         fftComputeShader.SetTexture(4, "_PrecomputeBuffer", twiddleFactorTex);
-        fftComputeShader.Dispatch(4, logN, (N / 2) / 8, 1);
+        fftComputeShader.Dispatch(4, 256 / 8, (N / 2) / 8, 1);
 
     }
 
