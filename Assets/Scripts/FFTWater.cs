@@ -150,8 +150,8 @@ public class FFTWater : MonoBehaviour {
     private RenderTexture heightTex, 
                           normalTex, 
                           initialSpectrumTex, 
-                          progressedSpectrumTex, 
                           pingPongTex, 
+                          pingPongTex2, 
                           htildeSlopeTex, 
                           htildeDisplacementTex,
                           foamTex;
@@ -284,13 +284,18 @@ public class FFTWater : MonoBehaviour {
         fftComputeShader.SetBuffer(0, "_Spectrums", spectrumBuffer);
     }
 
-    void InverseFFT(RenderTexture spectrumTex) {
+    void InverseFFT(RenderTexture spectrumTex, RenderTexture spectrumTex2) {
         bool pingPong = false;
 
         fftComputeShader.SetTexture(3, "_Buffer0", spectrumTex);
         fftComputeShader.SetTexture(3, "_Buffer1", pingPongTex);
+        fftComputeShader.SetTexture(3, "_Buffer2", spectrumTex2);
+        fftComputeShader.SetTexture(3, "_Buffer3", pingPongTex2);
+
         fftComputeShader.SetTexture(4, "_Buffer0", spectrumTex);
         fftComputeShader.SetTexture(4, "_Buffer1", pingPongTex);
+        fftComputeShader.SetTexture(4, "_Buffer2", spectrumTex2);
+        fftComputeShader.SetTexture(4, "_Buffer3", pingPongTex2);
         for (int i = 0; i < logN; ++i) {
             pingPong = !pingPong;
             fftComputeShader.SetInt("_Step", i);        
@@ -299,8 +304,13 @@ public class FFTWater : MonoBehaviour {
 
         fftComputeShader.SetTexture(5, "_Buffer0", spectrumTex);
         fftComputeShader.SetTexture(5, "_Buffer1", pingPongTex);
+        fftComputeShader.SetTexture(5, "_Buffer2", spectrumTex2);
+        fftComputeShader.SetTexture(5, "_Buffer3", pingPongTex2);
+
         fftComputeShader.SetTexture(6, "_Buffer0", spectrumTex);
         fftComputeShader.SetTexture(6, "_Buffer1", pingPongTex);
+        fftComputeShader.SetTexture(6, "_Buffer2", spectrumTex2);
+        fftComputeShader.SetTexture(6, "_Buffer3", pingPongTex2);
         for (int i = 0; i < logN; ++i) {
             pingPong = !pingPong;
             fftComputeShader.SetInt("_Step", i);
@@ -330,10 +340,10 @@ public class FFTWater : MonoBehaviour {
         threadGroupsY = Mathf.CeilToInt(N / 8.0f);
 
         initialSpectrumTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
-        progressedSpectrumTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
         htildeSlopeTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         htildeDisplacementTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
+        pingPongTex2 = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         heightTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         normalTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         foamTex = CreateRenderTex(N, N, RenderTextureFormat.RHalf);
@@ -381,8 +391,7 @@ public class FFTWater : MonoBehaviour {
         fftComputeShader.Dispatch(2, threadGroupsX, threadGroupsY, 1);
 
         // Compute FFT For Height
-        InverseFFT(htildeSlopeTex);
-        InverseFFT(htildeDisplacementTex);
+        InverseFFT(htildeSlopeTex, htildeDisplacementTex);
 
         // Assemble maps
         fftComputeShader.SetTexture(7, "_HTildeSlopeTex", htildeSlopeTex);
@@ -432,7 +441,11 @@ public class FFTWater : MonoBehaviour {
         Destroy(heightTex);
         Destroy(normalTex);
         Destroy(initialSpectrumTex);
-        Destroy(progressedSpectrumTex);
+        Destroy(pingPongTex);
+        Destroy(pingPongTex2);
+        Destroy(htildeSlopeTex);
+        Destroy(htildeDisplacementTex);
+        Destroy(foamTex);
     }
 
     private void OnDrawGizmos() {

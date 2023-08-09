@@ -222,8 +222,7 @@ float2 ComplexExp(float2 a) {
     return float2(cos(a.y), sin(a.y) * exp(a.x));
 }
 
-RWTexture2D<float4> _Buffer0;
-RWTexture2D<float4> _Buffer1;
+RWTexture2D<float4> _Buffer0, _Buffer1, _Buffer2, _Buffer3;
 uint _Step;
 
 float4 ComputeTwiddleFactorAndInputIndices(uint2 id) {
@@ -231,7 +230,6 @@ float4 ComputeTwiddleFactorAndInputIndices(uint2 id) {
     float2 mult = 2 * PI * float2(0.0f, 1.0f) / _N;
     uint i = (2 * b * (id.y / b) + id.y % b) % _N;
     float2 twiddle = ComplexExp(-mult * ((id.y / b) * b));
-
 
     return float4(twiddle, i, i + b);
 }
@@ -242,11 +240,9 @@ void CS_HorizontalStepInverseFFT_Ping(uint3 id : SV_DISPATCHTHREADID) {
 
     uint2 inputsIndices = (uint2)data.ba;
 
-    float4 x = 0.0f;
-    float4 y = 0.0f;
-
-    x = _Buffer0[uint2(inputsIndices.x, id.y)];
-    y = _Buffer0[uint2(inputsIndices.y, id.y)];
+    // First FFT Pair
+    float4 x = _Buffer0[uint2(inputsIndices.x, id.y)];
+    float4 y = _Buffer0[uint2(inputsIndices.y, id.y)];
 
     float2 x1 = x.rg;
     float2 y1 = y.rg;
@@ -255,8 +251,22 @@ void CS_HorizontalStepInverseFFT_Ping(uint3 id : SV_DISPATCHTHREADID) {
 
     float2 output1 = x1 + ComplexMult(float2(data.r, -data.g), y1);
     float2 output2 = x2 + ComplexMult(float2(data.r, -data.g), y2);
-
+    
     _Buffer1[id.xy] = float4(output1, output2);
+
+    // Second FFT Pair
+    float4 z = _Buffer2[uint2(inputsIndices.x, id.y)];
+    float4 w = _Buffer2[uint2(inputsIndices.y, id.y)];
+
+    float2 z1 = z.rg;
+    float2 w1 = w.rg;
+    float2 z2 = z.ba;
+    float2 w2 = w.ba;
+
+    float2 output3 = z1 + ComplexMult(float2(data.r, -data.g), w1);
+    float2 output4 = z2 + ComplexMult(float2(data.r, -data.g), w2);
+
+    _Buffer3[id.xy] = float4(output3, output4);
 }
 
 [numthreads(8,8,1)]
@@ -265,11 +275,9 @@ void CS_HorizontalStepInverseFFT_Pong(uint3 id : SV_DISPATCHTHREADID) {
 
     uint2 inputsIndices = (uint2)data.ba;
 
-    float4 x = 0.0f;
-    float4 y = 0.0f;
-
-    x = _Buffer1[uint2(inputsIndices.x, id.y)];
-    y = _Buffer1[uint2(inputsIndices.y, id.y)];
+    // First FFT Pair
+    float4 x = _Buffer1[uint2(inputsIndices.x, id.y)];
+    float4 y = _Buffer1[uint2(inputsIndices.y, id.y)];
 
     float2 x1 = x.rg;
     float2 y1 = y.rg;
@@ -280,6 +288,20 @@ void CS_HorizontalStepInverseFFT_Pong(uint3 id : SV_DISPATCHTHREADID) {
     float2 output2 = x2 + ComplexMult(float2(data.r, -data.g), y2);
 
     _Buffer0[id.xy] = float4(output1, output2);
+
+    // Second FFT Pair
+    float4 z = _Buffer3[uint2(inputsIndices.x, id.y)];
+    float4 w = _Buffer3[uint2(inputsIndices.y, id.y)];
+
+    float2 z1 = z.rg;
+    float2 w1 = w.rg;
+    float2 z2 = z.ba;
+    float2 w2 = w.ba;
+
+    float2 output3 = z1 + ComplexMult(float2(data.r, -data.g), w1);
+    float2 output4 = z2 + ComplexMult(float2(data.r, -data.g), w2);
+
+    _Buffer2[id.xy] = float4(output3, output4);
 }
 
 [numthreads(8,8,1)]
@@ -288,11 +310,9 @@ void CS_VerticalStepInverseFFT_Ping(uint3 id : SV_DISPATCHTHREADID) {
 
     uint2 inputsIndices = (uint2)data.ba;
 
-    float4 x = 0.0f;
-    float4 y = 0.0f;
-
-    x = _Buffer0[uint2(id.x, inputsIndices.x)];
-    y = _Buffer0[uint2(id.x, inputsIndices.y)];
+    // First FFT Pair
+    float4 x = _Buffer0[uint2(id.x, inputsIndices.x)];
+    float4 y = _Buffer0[uint2(id.x, inputsIndices.y)];
 
     float2 x1 = x.rg;
     float2 y1 = y.rg;
@@ -303,6 +323,20 @@ void CS_VerticalStepInverseFFT_Ping(uint3 id : SV_DISPATCHTHREADID) {
     float2 output2 = x2 + ComplexMult(float2(data.r, -data.g), y2);
 
     _Buffer1[id.xy] = float4(output1, output2);
+
+    // Second FFT Pair
+    float4 z = _Buffer2[uint2(id.x, inputsIndices.x)];
+    float4 w = _Buffer2[uint2(id.x, inputsIndices.y)];
+
+    float2 z1 = z.rg;
+    float2 w1 = w.rg;
+    float2 z2 = z.ba;
+    float2 w2 = w.ba;
+
+    float2 output3 = z1 + ComplexMult(float2(data.r, -data.g), w1);
+    float2 output4 = z2 + ComplexMult(float2(data.r, -data.g), w2);
+
+    _Buffer3[id.xy] = float4(output3, output4);
 }
 
 [numthreads(8, 8, 1)]
@@ -311,6 +345,7 @@ void CS_VerticalStepInverseFFT_Pong(uint3 id : SV_DISPATCHTHREADID) {
 
     uint2 inputsIndices = (uint2)data.ba;
 
+    // First FFT Pair
     float4 x = 0.0f;
     float4 y = 0.0f;
 
@@ -326,6 +361,20 @@ void CS_VerticalStepInverseFFT_Pong(uint3 id : SV_DISPATCHTHREADID) {
     float2 output2 = x2 + ComplexMult(float2(data.r, -data.g), y2);
 
     _Buffer0[id.xy] = float4(output1, output2);
+    
+    // Second FFT Pair
+    float4 z = _Buffer3[uint2(id.x, inputsIndices.x)];
+    float4 w = _Buffer3[uint2(id.x, inputsIndices.y)];
+
+    float2 z1 = z.rg;
+    float2 w1 = w.rg;
+    float2 z2 = z.ba;
+    float2 w2 = w.ba;
+
+    float2 output3 = z1 + ComplexMult(float2(data.r, -data.g), w1);
+    float2 output4 = z2 + ComplexMult(float2(data.r, -data.g), w2);
+
+    _Buffer2[id.xy] = float4(output3, output4);
 }
 
 float4 Permute(float4 data, float2 id) {
