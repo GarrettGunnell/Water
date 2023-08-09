@@ -89,7 +89,6 @@ public class FFTWater : MonoBehaviour {
 
     public Vector2 lambda = new Vector2(-1.0f, -1.0f);
 
-    public bool useFFT = true;
 
 
     [Header("Material Settings")]
@@ -153,7 +152,6 @@ public class FFTWater : MonoBehaviour {
                           initialSpectrumTex, 
                           progressedSpectrumTex, 
                           pingPongTex, 
-                          htildeTex, 
                           htildeSlopeTex, 
                           htildeDisplacementTex,
                           foamTex;
@@ -289,24 +287,24 @@ public class FFTWater : MonoBehaviour {
     void InverseFFT(RenderTexture spectrumTex) {
         bool pingPong = false;
 
+        fftComputeShader.SetTexture(3, "_Buffer0", spectrumTex);
+        fftComputeShader.SetTexture(3, "_Buffer1", pingPongTex);
         fftComputeShader.SetTexture(4, "_Buffer0", spectrumTex);
         fftComputeShader.SetTexture(4, "_Buffer1", pingPongTex);
-        fftComputeShader.SetTexture(5, "_Buffer0", spectrumTex);
-        fftComputeShader.SetTexture(5, "_Buffer1", pingPongTex);
         for (int i = 0; i < logN; ++i) {
             pingPong = !pingPong;
             fftComputeShader.SetInt("_Step", i);        
-            fftComputeShader.Dispatch(pingPong ? 4 : 5, threadGroupsX, threadGroupsY, 1);
+            fftComputeShader.Dispatch(pingPong ? 3 : 4, threadGroupsX, threadGroupsY, 1);
         }
 
+        fftComputeShader.SetTexture(5, "_Buffer0", spectrumTex);
+        fftComputeShader.SetTexture(5, "_Buffer1", pingPongTex);
         fftComputeShader.SetTexture(6, "_Buffer0", spectrumTex);
         fftComputeShader.SetTexture(6, "_Buffer1", pingPongTex);
-        fftComputeShader.SetTexture(7, "_Buffer0", spectrumTex);
-        fftComputeShader.SetTexture(7, "_Buffer1", pingPongTex);
         for (int i = 0; i < logN; ++i) {
             pingPong = !pingPong;
             fftComputeShader.SetInt("_Step", i);
-            fftComputeShader.Dispatch(pingPong ? 6 : 7, threadGroupsX, threadGroupsY, 1);
+            fftComputeShader.Dispatch(pingPong ? 5 : 6, threadGroupsX, threadGroupsY, 1);
         }
 
         if (pingPong) Graphics.Blit(pingPongTex, spectrumTex);
@@ -326,14 +324,13 @@ public class FFTWater : MonoBehaviour {
         CreateMaterial();
         cam = GameObject.Find("Main Camera").GetComponent<Camera>();
 
-        N = 256;
+        N = 512;
         logN = (int)Mathf.Log(N, 2.0f);
         threadGroupsX = Mathf.CeilToInt(N / 8.0f);
         threadGroupsY = Mathf.CeilToInt(N / 8.0f);
 
         initialSpectrumTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         progressedSpectrumTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
-        htildeTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf);
         htildeSlopeTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         htildeDisplacementTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
@@ -377,42 +374,30 @@ public class FFTWater : MonoBehaviour {
             fftComputeShader.Dispatch(1, threadGroupsX, threadGroupsY, 1);
         }
         
-        if (useFFT) {
-            // Progress Spectrum For FFT
-            fftComputeShader.SetTexture(3, "_InitialSpectrumTex", initialSpectrumTex);
-            fftComputeShader.SetTexture(3, "_HTildeSlopeTex", htildeSlopeTex);
-            fftComputeShader.SetTexture(3, "_HTildeDisplacementTex", htildeDisplacementTex);
-            fftComputeShader.Dispatch(3, threadGroupsX, threadGroupsY, 1);
+        // Progress Spectrum For FFT
+        fftComputeShader.SetTexture(2, "_InitialSpectrumTex", initialSpectrumTex);
+        fftComputeShader.SetTexture(2, "_HTildeSlopeTex", htildeSlopeTex);
+        fftComputeShader.SetTexture(2, "_HTildeDisplacementTex", htildeDisplacementTex);
+        fftComputeShader.Dispatch(2, threadGroupsX, threadGroupsY, 1);
 
-            // Compute FFT For Height
-            InverseFFT(htildeSlopeTex);
-            InverseFFT(htildeDisplacementTex);
+        // Compute FFT For Height
+        InverseFFT(htildeSlopeTex);
+        InverseFFT(htildeDisplacementTex);
 
-            // Assemble maps
-            fftComputeShader.SetTexture(8, "_HTildeSlopeTex", htildeSlopeTex);
-            fftComputeShader.SetTexture(8, "_HTildeDisplacementTex", htildeDisplacementTex);
-            fftComputeShader.SetTexture(8, "_HeightTex", heightTex);
-            fftComputeShader.SetTexture(8, "_NormalTex", normalTex);
-            fftComputeShader.SetTexture(8, "_FoamTex", foamTex);
-            fftComputeShader.Dispatch(8, threadGroupsX, threadGroupsY, 1);
+        // Assemble maps
+        fftComputeShader.SetTexture(7, "_HTildeSlopeTex", htildeSlopeTex);
+        fftComputeShader.SetTexture(7, "_HTildeDisplacementTex", htildeDisplacementTex);
+        fftComputeShader.SetTexture(7, "_HeightTex", heightTex);
+        fftComputeShader.SetTexture(7, "_NormalTex", normalTex);
+        fftComputeShader.SetTexture(7, "_FoamTex", foamTex);
+        fftComputeShader.Dispatch(7, threadGroupsX, threadGroupsY, 1);
 
-            //Graphics.Blit(foamTex, pingPongTex);
+        //Graphics.Blit(foamTex, pingPongTex);
 
-            //fftComputeShader.SetTexture(9, "_PingTex", pingPongTex);
-            //fftComputeShader.SetTexture(9, "_FoamTex", foamTex);
-            //fftComputeShader.Dispatch(9, threadGroupsX, threadGroupsY, 1);
-        } else {
-            // Progress Spectrum For DFT
-            fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);
-            fftComputeShader.SetTexture(1, "_ProgressedSpectrumTex", progressedSpectrumTex);
-            fftComputeShader.Dispatch(1, threadGroupsX, threadGroupsY, 1);
+        //fftComputeShader.SetTexture(9, "_PingTex", pingPongTex);
+        //fftComputeShader.SetTexture(9, "_FoamTex", foamTex);
+        //fftComputeShader.Dispatch(9, threadGroupsX, threadGroupsY, 1);
 
-            // Calculate DFT and store height, displacement, and normal from DFT output into textures
-            fftComputeShader.SetTexture(2, "_HeightTex", heightTex);
-            fftComputeShader.SetTexture(2, "_ProgressedSpectrumTex", progressedSpectrumTex);
-            fftComputeShader.SetTexture(2, "_NormalTex", normalTex);
-            fftComputeShader.Dispatch(2, threadGroupsX, threadGroupsY, 1);
-        }
         waterMaterial.SetTexture("_HeightTex", heightTex);
         waterMaterial.SetTexture("_NormalTex", normalTex);
         waterMaterial.SetTexture("_FoamTex", foamTex);

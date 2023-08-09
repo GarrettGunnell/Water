@@ -1,6 +1,5 @@
 #pragma kernel CS_InitializeSpectrum
 #pragma kernel CS_PackSpectrumConjugate
-#pragma kernel CS_DFT
 #pragma kernel CS_UpdateSpectrumForFFT
 #pragma kernel CS_HorizontalStepInverseFFT_Ping
 #pragma kernel CS_HorizontalStepInverseFFT_Pong
@@ -12,12 +11,10 @@
 #define PI 3.14159265358979323846
 
 RWTexture2D<float4> _InitialSpectrumTex;
-RWTexture2D<float2> _ProgressedSpectrumTex;
 RWTexture2D<float4> _HeightTex, _NormalTex;
 RWTexture2D<float> _FoamTex;
 Texture2D<float2> _PingTex;
 
-RWTexture2D<float2> _HTildeTex;
 RWTexture2D<float4> _HTildeSlopeTex, _HTildeDisplacementTex;
 
 float _FrameTime, _DeltaTime, _A, _Gravity, _RepeatTime, _Damping, _Depth, _LowCutoff, _HighCutoff;
@@ -175,42 +172,6 @@ void CS_PackSpectrumConjugate(uint3 id : SV_DISPATCHTHREADID) {
     float2 h0conj = _InitialSpectrumTex[uint2((_N - id.x ) % _N, (_N - id.y) % _N)];
 
     _InitialSpectrumTex[id.xy] = float4(h0, h0conj.x, -h0conj.y);
-}
-
-
-[numthreads(8, 8, 1)]
-void CS_DFT(uint3 id : SV_DISPATCHTHREADID) {
-    float halfN = _N / 2.0f;
-    
-    float2 x = id.xy - halfN;
-
-    float2 h = 0.0f;
-    float2 displacement = 0.0f;
-    float3 normal = 0.0f;
-
-    for (int m = 0; m < _N; ++m) {
-        float kz = 2.0f * PI * (m - halfN) / _LengthScale;
-        for (int n = 0; n < _N; ++n) {
-            float kx = 2.0f * PI * (n - halfN) / _LengthScale;
-            float2 K = float2(kx, kz);
-            float kMag = length(K);
-            float kdotx = dot(K, x);
-
-            float2 c = EulerFormula(kdotx);
-            float2 htilde = ComplexMult(_ProgressedSpectrumTex[uint2(n, m)], c);
-            
-            h += htilde;
-            normal += float3(-K.x * htilde.y, 0.0f, -K.y * htilde.y);
-            if (kMag > 0.0001f)
-                displacement += K / kMag * htilde.y;
-        }
-    }
-
-    normal = float3(-normal.x, 1.0f, -normal.z);
-    normal = normalize(normal);
-    
-    _HeightTex[id.xy] = float4(h.x, _Lambda * displacement, 0.0f);
-    _NormalTex[id.xy] = float4(normal, 0.0f);
 }
 
 [numthreads(8, 8, 1)]
