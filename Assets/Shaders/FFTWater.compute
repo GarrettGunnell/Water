@@ -1,8 +1,8 @@
 #pragma kernel CS_InitializeSpectrum
 #pragma kernel CS_PackSpectrumConjugate
 #pragma kernel CS_UpdateSpectrumForFFT
-#pragma kernel CS_FFT
-#pragma kernel CS_HorizontalStepInverseFFT_Pong
+#pragma kernel CS_HorizontalFFT
+#pragma kernel CS_VerticalFFT
 #pragma kernel CS_VerticalStepInverseFFT_Ping
 #pragma kernel CS_VerticalStepInverseFFT_Pong
 #pragma kernel CS_AssembleMaps
@@ -238,7 +238,7 @@ float4 ComputeTwiddleFactorAndInputIndices(uint2 id) {
 #define LOG_SIZE 10
 
 RWTexture2D<float4> _FourierTarget;
-bool _Direction, _Inverse;
+bool _Direction;
 
 groupshared float4 fftGroupBuffer[2][SIZE];
 
@@ -248,18 +248,13 @@ void ButterflyValues(uint step, uint index, out uint2 indices, out float2 twiddl
     uint w = b * (index / b);
     uint i = (w + index) % SIZE;
     sincos(-twoPi / SIZE * w, twiddle.y, twiddle.x);
-    if (_Inverse)
-        twiddle.y = -twiddle.y;
+
+    //This is what makes it the inverse FFT
+    twiddle.y = -twiddle.y;
     indices = uint2(i, i + b);
 }
 
-[numthreads(SIZE, 1, 1)]
-void CS_FFT(uint3 id : SV_DISPATCHTHREADID) {
-    uint threadIndex = id.x;
-    uint2 targetIndex = _Direction ? id.yx : id.xy;
-
-    float4 input = _FourierTarget[targetIndex];
-
+float4 FFT(uint threadIndex, float4 input) {
     fftGroupBuffer[0][threadIndex] = input;
     GroupMemoryBarrierWithGroupSync();
     bool flag = false;
@@ -277,43 +272,17 @@ void CS_FFT(uint3 id : SV_DISPATCHTHREADID) {
         GroupMemoryBarrierWithGroupSync();
     }
 
-
-    _FourierTarget[targetIndex] = fftGroupBuffer[flag][threadIndex];
+    return fftGroupBuffer[flag][threadIndex];
 }
 
-[numthreads(8,8,1)]
-void CS_HorizontalStepInverseFFT_Pong(uint3 id : SV_DISPATCHTHREADID) {
-    float4 data = ComputeTwiddleFactorAndInputIndices(uint2(_Step, id.x));
+[numthreads(SIZE, 1, 1)]
+void CS_HorizontalFFT(uint3 id : SV_DISPATCHTHREADID) {
+    _FourierTarget[id.xy] = FFT(id.x, _FourierTarget[id.xy]);
+}
 
-    uint2 inputsIndices = (uint2)data.ba;
-
-    // First FFT Pair
-    float4 x = _Buffer1[uint2(inputsIndices.x, id.y)];
-    float4 y = _Buffer1[uint2(inputsIndices.y, id.y)];
-
-    float2 x1 = x.rg;
-    float2 y1 = y.rg;
-    float2 x2 = x.ba;
-    float2 y2 = y.ba;
-
-    float2 output1 = x1 + ComplexMult(float2(data.r, -data.g), y1);
-    float2 output2 = x2 + ComplexMult(float2(data.r, -data.g), y2);
-
-    _Buffer0[id.xy] = float4(output1, output2);
-
-    // Second FFT Pair
-    float4 z = _Buffer3[uint2(inputsIndices.x, id.y)];
-    float4 w = _Buffer3[uint2(inputsIndices.y, id.y)];
-
-    float2 z1 = z.rg;
-    float2 w1 = w.rg;
-    float2 z2 = z.ba;
-    float2 w2 = w.ba;
-
-    float2 output3 = z1 + ComplexMult(float2(data.r, -data.g), w1);
-    float2 output4 = z2 + ComplexMult(float2(data.r, -data.g), w2);
-
-    _Buffer2[id.xy] = float4(output3, output4);
+[numthreads(SIZE, 1, 1)]
+void CS_VerticalFFT(uint3 id : SV_DISPATCHTHREADID) {
+    _FourierTarget[id.yx] = FFT(id.x, _FourierTarget[id.yx]);
 }
 
 [numthreads(8,8,1)]

@@ -285,21 +285,15 @@ public class FFTWater : MonoBehaviour {
     }
 
     void InverseFFT(RenderTexture spectrumTex, RenderTexture spectrumTex2) {
-        bool pingPong = false;
-
-        fftComputeShader.SetBool("_Inverse", true);
-
         fftComputeShader.SetTexture(3, "_FourierTarget", spectrumTex);
-        fftComputeShader.SetBool("_Direction", false);
         fftComputeShader.Dispatch(3, 1, N, 1);
-        fftComputeShader.SetBool("_Direction", true);
-        fftComputeShader.Dispatch(3, 1, N, 1);
+        fftComputeShader.SetTexture(4, "_FourierTarget", spectrumTex);
+        fftComputeShader.Dispatch(4, 1, N, 1);
 
         fftComputeShader.SetTexture(3, "_FourierTarget", spectrumTex2);
-        fftComputeShader.SetBool("_Direction", false);
         fftComputeShader.Dispatch(3, 1, N, 1);
-        fftComputeShader.SetBool("_Direction", true);
-        fftComputeShader.Dispatch(3, 1, N, 1);
+        fftComputeShader.SetTexture(4, "_FourierTarget", spectrumTex2);
+        fftComputeShader.Dispatch(4, 1, N, 1);
 
     }
 
