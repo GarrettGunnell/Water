@@ -6,6 +6,7 @@ Shader "Custom/FFTWater" {
 
 	CGINCLUDE
         #define _TessellationEdgeLength 10
+		//#define NEW_LIGHTING
 
         struct TessellationFactors {
             float edge[3] : SV_TESSFACTOR;
@@ -19,7 +20,7 @@ Shader "Custom/FFTWater" {
 
             return edgeLength * _ScreenParams.y / (_TessellationEdgeLength * (pow(viewDistance * 0.5f, 1.2f)));
         }
-		
+
         bool TriangleIsBelowClipPlane(float3 p0, float3 p1, float3 p2, int planeIndex, float bias) {
             float4 plane = unity_CameraWorldClipPlanes[planeIndex];
 
@@ -93,7 +94,7 @@ Shader "Custom/FFTWater" {
 
 			float4x4 _CameraInvViewProjection;
 			sampler2D _CameraDepthTexture;
-            Texture2D _HeightTex, _SpectrumTex, _NormalTex, _FoamTex;
+            Texture2D _DisplacementTex, _NormalTex, _MomentTex;
             SamplerState point_repeat_sampler, linear_repeat_sampler;
 
             float _Tile;
@@ -109,7 +110,7 @@ Shader "Custom/FFTWater" {
 			v2g vp(VertexData v) {
 				v2g g;
                 g.worldPos = mul(unity_ObjectToWorld, v.vertex);
-				float3 displacement = _HeightTex.SampleLevel(linear_repeat_sampler, v.uv * _Tile, 0).rgb;
+				float3 displacement = _DisplacementTex.SampleLevel(linear_repeat_sampler, v.uv * _Tile, 0).rgb;
 
 				v.vertex.xyz += mul(unity_WorldToObject, displacement.xyz);
                 g.pos = UnityObjectToClipPos(v.vertex);
@@ -193,15 +194,22 @@ Shader "Custom/FFTWater" {
                 float3 viewDir = normalize(_WorldSpaceCameraPos - f.data.worldPos);
                 float3 halfwayDir = normalize(lightDir + viewDir);
 
-                float height = _HeightTex.Sample(linear_repeat_sampler, f.data.uv * _Tile).y;
-				float jacobian = _FoamTex.Sample(linear_repeat_sampler, f.data.uv * _Tile).r;
+				float4 slopesFoamJacobian = _NormalTex.Sample(linear_repeat_sampler, f.data.uv * _Tile);
+				float3 secondOrderMomentsCovariance = _MomentTex.Sample(linear_repeat_sampler, f.data.uv * _Tile);
 
-				float4 derivatives = _NormalTex.Sample(linear_repeat_sampler, f.data.uv * _Tile);
 				
-				float2 slope = derivatives.xy / (1 + abs(derivatives.zw));
-				slope *= _NormalStrength;
+				// I say slopes here but the slope is also the first order moment
+				float2 slopes = slopesFoamJacobian.xy;
+				float2 secondMoments = secondOrderMomentsCovariance.rg;
+				float covariance = secondOrderMomentsCovariance.b;
+				float foam = slopesFoamJacobian.b;
 
-				float3 normal = normalize(float3(-slope.x, 1.0f, -slope.y));
+				#ifdef NEW_LIGHTING
+				// covariance matrix
+				float3 output = 0.0f;
+				#else
+				slopes *= _NormalStrength;
+				float3 normal = normalize(float3(-slopes.x, 1.0f, -slopes.y));
                 normal = normalize(UnityObjectToWorldNormal(normalize(normal)));
 
 				// normal = centralDifferenceNormal(f.data.worldPos, 0.01f);
@@ -248,7 +256,8 @@ Shader "Custom/FFTWater" {
 				
 
 				float3 output = _Ambient + diffuse + specular + fresnel;
-				output = lerp(output, _TipColor, saturate(jacobian));
+				output = lerp(output, _TipColor, saturate(foam));
+				#endif
 				
 				return float4(output, 1.0f);
 			}

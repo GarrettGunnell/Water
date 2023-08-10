@@ -147,21 +147,21 @@ public class FFTWater : MonoBehaviour {
 
 
 
-    private RenderTexture heightTex, 
+    private RenderTexture displacementTex, 
                           normalTex, 
+                          momentTex,
                           initialSpectrumTex, 
                           pingPongTex, 
                           pingPongTex2, 
                           htildeSlopeTex, 
-                          htildeDisplacementTex,
-                          foamTex;
+                          htildeDisplacementTex;
 
     private ComputeBuffer spectrumBuffer;
 
     private int N, logN, threadGroupsX, threadGroupsY;
 
     public RenderTexture GetDisplacementMap() {
-        return heightTex;
+        return displacementTex;
     }
 
     public RenderTexture GetNormalMap() {
@@ -180,8 +180,8 @@ public class FFTWater : MonoBehaviour {
         return htildeDisplacementTex;
     }
 
-    public RenderTexture GetFoam() {
-        return foamTex;
+    public RenderTexture GetMoments() {
+        return momentTex;
     }
 
     private void CreateWaterPlane() {
@@ -287,37 +287,20 @@ public class FFTWater : MonoBehaviour {
     void InverseFFT(RenderTexture spectrumTex, RenderTexture spectrumTex2) {
         bool pingPong = false;
 
-        fftComputeShader.SetTexture(3, "_Buffer0", spectrumTex);
-        fftComputeShader.SetTexture(3, "_Buffer1", pingPongTex);
-        fftComputeShader.SetTexture(3, "_Buffer2", spectrumTex2);
-        fftComputeShader.SetTexture(3, "_Buffer3", pingPongTex2);
+        fftComputeShader.SetBool("_Inverse", true);
 
-        fftComputeShader.SetTexture(4, "_Buffer0", spectrumTex);
-        fftComputeShader.SetTexture(4, "_Buffer1", pingPongTex);
-        fftComputeShader.SetTexture(4, "_Buffer2", spectrumTex2);
-        fftComputeShader.SetTexture(4, "_Buffer3", pingPongTex2);
-        for (int i = 0; i < logN; ++i) {
-            pingPong = !pingPong;
-            fftComputeShader.SetInt("_Step", i);        
-            fftComputeShader.Dispatch(pingPong ? 3 : 4, threadGroupsX, threadGroupsY, 1);
-        }
+        fftComputeShader.SetTexture(3, "_FourierTarget", spectrumTex);
+        fftComputeShader.SetBool("_Direction", false);
+        fftComputeShader.Dispatch(3, 1, N, 1);
+        fftComputeShader.SetBool("_Direction", true);
+        fftComputeShader.Dispatch(3, 1, N, 1);
 
-        fftComputeShader.SetTexture(5, "_Buffer0", spectrumTex);
-        fftComputeShader.SetTexture(5, "_Buffer1", pingPongTex);
-        fftComputeShader.SetTexture(5, "_Buffer2", spectrumTex2);
-        fftComputeShader.SetTexture(5, "_Buffer3", pingPongTex2);
+        fftComputeShader.SetTexture(3, "_FourierTarget", spectrumTex2);
+        fftComputeShader.SetBool("_Direction", false);
+        fftComputeShader.Dispatch(3, 1, N, 1);
+        fftComputeShader.SetBool("_Direction", true);
+        fftComputeShader.Dispatch(3, 1, N, 1);
 
-        fftComputeShader.SetTexture(6, "_Buffer0", spectrumTex);
-        fftComputeShader.SetTexture(6, "_Buffer1", pingPongTex);
-        fftComputeShader.SetTexture(6, "_Buffer2", spectrumTex2);
-        fftComputeShader.SetTexture(6, "_Buffer3", pingPongTex2);
-        for (int i = 0; i < logN; ++i) {
-            pingPong = !pingPong;
-            fftComputeShader.SetInt("_Step", i);
-            fftComputeShader.Dispatch(pingPong ? 5 : 6, threadGroupsX, threadGroupsY, 1);
-        }
-
-        if (pingPong) Graphics.Blit(pingPongTex, spectrumTex);
     }
 
     RenderTexture CreateRenderTex(int width, int height, RenderTextureFormat format) {
@@ -334,7 +317,7 @@ public class FFTWater : MonoBehaviour {
         CreateMaterial();
         cam = GameObject.Find("Main Camera").GetComponent<Camera>();
 
-        N = 512;
+        N = 1024;
         logN = (int)Mathf.Log(N, 2.0f);
         threadGroupsX = Mathf.CeilToInt(N / 8.0f);
         threadGroupsY = Mathf.CeilToInt(N / 8.0f);
@@ -344,9 +327,9 @@ public class FFTWater : MonoBehaviour {
         htildeDisplacementTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         pingPongTex2 = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
-        heightTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
+        displacementTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
         normalTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
-        foamTex = CreateRenderTex(N, N, RenderTextureFormat.RHalf);
+        momentTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
 
         spectrumBuffer = new ComputeBuffer(2, 8 * sizeof(float));
 
@@ -396,9 +379,9 @@ public class FFTWater : MonoBehaviour {
         // Assemble maps
         fftComputeShader.SetTexture(7, "_HTildeSlopeTex", htildeSlopeTex);
         fftComputeShader.SetTexture(7, "_HTildeDisplacementTex", htildeDisplacementTex);
-        fftComputeShader.SetTexture(7, "_HeightTex", heightTex);
+        fftComputeShader.SetTexture(7, "_DisplacementTex", displacementTex);
         fftComputeShader.SetTexture(7, "_NormalTex", normalTex);
-        fftComputeShader.SetTexture(7, "_FoamTex", foamTex);
+        fftComputeShader.SetTexture(7, "_MomentTex", momentTex);
         fftComputeShader.Dispatch(7, threadGroupsX, threadGroupsY, 1);
 
         //Graphics.Blit(foamTex, pingPongTex);
@@ -407,9 +390,9 @@ public class FFTWater : MonoBehaviour {
         //fftComputeShader.SetTexture(9, "_FoamTex", foamTex);
         //fftComputeShader.Dispatch(9, threadGroupsX, threadGroupsY, 1);
 
-        waterMaterial.SetTexture("_HeightTex", heightTex);
+        waterMaterial.SetTexture("_DisplacementTex", displacementTex);
         waterMaterial.SetTexture("_NormalTex", normalTex);
-        waterMaterial.SetTexture("_FoamTex", foamTex);
+        waterMaterial.SetTexture("_MomentTex", momentTex);
 
         if (useTextureForFresnel) {
             waterMaterial.SetTexture("_EnvironmentMap", environmentTexture);
@@ -438,14 +421,14 @@ public class FFTWater : MonoBehaviour {
             normals = null;
         }
 
-        Destroy(heightTex);
+        Destroy(displacementTex);
         Destroy(normalTex);
+        Destroy(momentTex);
         Destroy(initialSpectrumTex);
         Destroy(pingPongTex);
         Destroy(pingPongTex2);
         Destroy(htildeSlopeTex);
         Destroy(htildeDisplacementTex);
-        Destroy(foamTex);
     }
 
     private void OnDrawGizmos() {

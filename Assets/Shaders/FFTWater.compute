@@ -1,7 +1,7 @@
 #pragma kernel CS_InitializeSpectrum
 #pragma kernel CS_PackSpectrumConjugate
 #pragma kernel CS_UpdateSpectrumForFFT
-#pragma kernel CS_HorizontalStepInverseFFT_Ping
+#pragma kernel CS_FFT
 #pragma kernel CS_HorizontalStepInverseFFT_Pong
 #pragma kernel CS_VerticalStepInverseFFT_Ping
 #pragma kernel CS_VerticalStepInverseFFT_Pong
@@ -11,7 +11,7 @@
 #define PI 3.14159265358979323846
 
 RWTexture2D<float4> _InitialSpectrumTex;
-RWTexture2D<float4> _HeightTex, _NormalTex;
+RWTexture2D<float4> _DisplacementTex, _NormalTex, _MomentTex;
 RWTexture2D<float> _FoamTex;
 Texture2D<float2> _PingTex;
 
@@ -208,14 +208,14 @@ void CS_UpdateSpectrumForFFT(uint3 id : SV_DISPATCHTHREADID) {
     float2 displacementY_dz = ih * K.y;
     float2 displacementZ_dz = -htilde * K.y * K.y * kMagRcp;
 
-    float2 htildeSlopeX = float2(displacementX.x - displacementZ.y, displacementX.y + displacementZ.x);
-    float2 htildeSlopeZ = float2(displacementY.x - displacementZ_dx.y, displacementY.y + displacementZ_dx.x);
+    float2 htildeDisplacementX = float2(displacementX.x - displacementZ.y, displacementX.y + displacementZ.x);
+    float2 htildeDisplacementZ = float2(displacementY.x - displacementZ_dx.y, displacementY.y + displacementZ_dx.x);
+    
+    float2 htildeSlopeX = float2(displacementY_dx.x - displacementY_dz.y, displacementY_dx.y + displacementY_dz.x);
+    float2 htildeSlopeZ = float2(displacementX_dx.x - displacementZ_dz.y, displacementX_dx.y + displacementZ_dz.x);
 
-    float2 htildeDisplacementX = float2(displacementY_dx.x - displacementY_dz.y, displacementY_dx.y + displacementY_dz.x);
-    float2 htildeDisplacementZ = float2(displacementX_dx.x - displacementZ_dz.y, displacementX_dx.y + displacementZ_dz.x);
-
-    _HTildeSlopeTex[id.xy] = float4(htildeSlopeX, htildeSlopeZ);
     _HTildeDisplacementTex[id.xy] = float4(htildeDisplacementX, htildeDisplacementZ);
+    _HTildeSlopeTex[id.xy] = float4(htildeSlopeX, htildeSlopeZ);
 }
 
 float2 ComplexExp(float2 a) {
@@ -234,39 +234,51 @@ float4 ComputeTwiddleFactorAndInputIndices(uint2 id) {
     return float4(twiddle, i, i + b);
 }
 
-[numthreads(8, 8, 1)]
-void CS_HorizontalStepInverseFFT_Ping(uint3 id : SV_DISPATCHTHREADID) {
-    float4 data = ComputeTwiddleFactorAndInputIndices(uint2(_Step, id.x));
+#define SIZE 1024
+#define LOG_SIZE 10
 
-    uint2 inputsIndices = (uint2)data.ba;
+RWTexture2D<float4> _FourierTarget;
+bool _Direction, _Inverse;
 
-    // First FFT Pair
-    float4 x = _Buffer0[uint2(inputsIndices.x, id.y)];
-    float4 y = _Buffer0[uint2(inputsIndices.y, id.y)];
+groupshared float4 fftGroupBuffer[2][SIZE];
 
-    float2 x1 = x.rg;
-    float2 y1 = y.rg;
-    float2 x2 = x.ba;
-    float2 y2 = y.ba;
+void ButterflyValues(uint step, uint index, out uint2 indices, out float2 twiddle) {
+    const float twoPi = 6.28318530718;
+    uint b = SIZE >> (step + 1);
+    uint w = b * (index / b);
+    uint i = (w + index) % SIZE;
+    sincos(-twoPi / SIZE * w, twiddle.y, twiddle.x);
+    if (_Inverse)
+        twiddle.y = -twiddle.y;
+    indices = uint2(i, i + b);
+}
 
-    float2 output1 = x1 + ComplexMult(float2(data.r, -data.g), y1);
-    float2 output2 = x2 + ComplexMult(float2(data.r, -data.g), y2);
-    
-    _Buffer1[id.xy] = float4(output1, output2);
+[numthreads(SIZE, 1, 1)]
+void CS_FFT(uint3 id : SV_DISPATCHTHREADID) {
+    uint threadIndex = id.x;
+    uint2 targetIndex = _Direction ? id.yx : id.xy;
 
-    // Second FFT Pair
-    float4 z = _Buffer2[uint2(inputsIndices.x, id.y)];
-    float4 w = _Buffer2[uint2(inputsIndices.y, id.y)];
+    float4 input = _FourierTarget[targetIndex];
 
-    float2 z1 = z.rg;
-    float2 w1 = w.rg;
-    float2 z2 = z.ba;
-    float2 w2 = w.ba;
+    fftGroupBuffer[0][threadIndex] = input;
+    GroupMemoryBarrierWithGroupSync();
+    bool flag = false;
 
-    float2 output3 = z1 + ComplexMult(float2(data.r, -data.g), w1);
-    float2 output4 = z2 + ComplexMult(float2(data.r, -data.g), w2);
+    [unroll]
+    for (uint step = 0; step < LOG_SIZE; ++step) {
+        uint2 inputsIndices;
+        float2 twiddle;
+        ButterflyValues(step, threadIndex, inputsIndices, twiddle);
 
-    _Buffer3[id.xy] = float4(output3, output4);
+        float4 v = fftGroupBuffer[flag][inputsIndices.y];
+        fftGroupBuffer[!flag][threadIndex] = fftGroupBuffer[flag][inputsIndices.x] + float4(ComplexMult(twiddle, v.xy), ComplexMult(twiddle, v.zw));
+
+        flag = !flag;
+        GroupMemoryBarrierWithGroupSync();
+    }
+
+
+    _FourierTarget[targetIndex] = fftGroupBuffer[flag][threadIndex];
 }
 
 [numthreads(8,8,1)]
@@ -386,29 +398,30 @@ void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
     float4 htildeSlope = Permute(_HTildeSlopeTex[id.xy], id);
     float4 htildeDisplacement = Permute(_HTildeDisplacementTex[id.xy], id);
 
-    float2 dxdz = htildeSlope.rg;
-    float2 dydxz = htildeSlope.ba;
-    float2 dyxdyz = htildeDisplacement.rg;
-    float2 dxxdzz = htildeDisplacement.ba;
+    float2 dxdz = htildeDisplacement.rg;
+    float2 dydxz = htildeDisplacement.ba;
+    float2 dyxdyz = htildeSlope.rg;
+    float2 dxxdzz = htildeSlope.ba;
     
     float jacobian = (1.0f + _Lambda.x * dxxdzz.x) * (1.0f + _Lambda.y * dxxdzz.y) - _Lambda.x * _Lambda.y * dydxz.y * dydxz.y;
 
     float3 displacement = float3(_Lambda.x * dxdz.x, dydxz.x, _Lambda.y * dxdz.y);
 
-    _HeightTex[id.xy] = float4(displacement, 0.0f);
-    _NormalTex[id.xy] = float4(dyxdyz, dxxdzz * _Lambda);
+    float2 slopes = dyxdyz.xy / (1 + abs(dxxdzz * _Lambda));
+    float covariance = slopes.x * slopes.y;
 
-    float foam = _FoamTex[id.xy];
+    float foam = _NormalTex[id.xy].b;
     foam *= exp(-_FoamDecayRate);
     foam = saturate(foam);
 
-    jacobian = max(0.0f, -(jacobian - _FoamBias));
+    float biasedJacobian = max(0.0f, -(jacobian - _FoamBias));
 
+    if (biasedJacobian > _FoamThreshold)
+        foam += _FoamAdd * biasedJacobian;
 
-    if (jacobian > _FoamThreshold)
-        foam += _FoamAdd * jacobian;
-
-    _FoamTex[id.xy] = foam;
+    _DisplacementTex[id.xy] = float4(displacement, 0.0f);
+    _NormalTex[id.xy] = float4(slopes, foam, jacobian);
+    _MomentTex[id.xy] = float4(slopes * slopes, covariance, 0.0f);
 }
 
 
