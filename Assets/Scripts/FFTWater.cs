@@ -145,8 +145,6 @@ public class FFTWater : MonoBehaviour {
     [Range(0.0f, 1.0f)]
     public float foamDecayRate = 0.05f;
 
-
-
     private RenderTexture displacementTex, 
                           normalTex, 
                           momentTex,
@@ -154,7 +152,8 @@ public class FFTWater : MonoBehaviour {
                           pingPongTex, 
                           pingPongTex2, 
                           htildeSlopeTex, 
-                          htildeDisplacementTex;
+                          htildeDisplacementTex,
+                          spectrumTextures;
 
     private ComputeBuffer spectrumBuffer;
 
@@ -284,21 +283,17 @@ public class FFTWater : MonoBehaviour {
         fftComputeShader.SetBuffer(0, "_Spectrums", spectrumBuffer);
     }
 
-    void InverseFFT(RenderTexture spectrumTex, RenderTexture spectrumTex2) {
-        fftComputeShader.SetTexture(3, "_FourierTarget", spectrumTex);
+    void InverseFFT(RenderTexture spectrumTextures) {
+        fftComputeShader.SetTexture(3, "_FourierTarget", spectrumTextures);
         fftComputeShader.Dispatch(3, 1, N, 1);
-        fftComputeShader.SetTexture(4, "_FourierTarget", spectrumTex);
+        fftComputeShader.SetTexture(4, "_FourierTarget", spectrumTextures);
         fftComputeShader.Dispatch(4, 1, N, 1);
-
-        fftComputeShader.SetTexture(3, "_FourierTarget", spectrumTex2);
-        fftComputeShader.Dispatch(3, 1, N, 1);
-        fftComputeShader.SetTexture(4, "_FourierTarget", spectrumTex2);
-        fftComputeShader.Dispatch(4, 1, N, 1);
-
     }
 
-    RenderTexture CreateRenderTex(int width, int height, RenderTextureFormat format) {
+    RenderTexture CreateRenderTex(int width, int height, RenderTextureFormat format, bool useMips) {
         RenderTexture rt = new RenderTexture(width, height, 0, format, RenderTextureReadWrite.Linear);
+        rt.useMipMap = useMips;
+        rt.autoGenerateMips = false;
         rt.enableRandomWrite = true;
         rt.Create();
 
@@ -316,14 +311,20 @@ public class FFTWater : MonoBehaviour {
         threadGroupsX = Mathf.CeilToInt(N / 8.0f);
         threadGroupsY = Mathf.CeilToInt(N / 8.0f);
 
-        initialSpectrumTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
-        htildeSlopeTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
-        htildeDisplacementTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
-        pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
-        pingPongTex2 = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
-        displacementTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
-        normalTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
-        momentTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf);
+        initialSpectrumTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
+        htildeSlopeTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
+        htildeDisplacementTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
+        pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
+        pingPongTex2 = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
+        displacementTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, true);
+        normalTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, true);
+        momentTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, true);
+
+        spectrumTextures = new RenderTexture(N, N, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+        spectrumTextures.dimension = UnityEngine.Rendering.TextureDimension.Tex2DArray;
+        spectrumTextures.enableRandomWrite = true;
+        spectrumTextures.volumeDepth = 2;
+        spectrumTextures.Create();
 
         spectrumBuffer = new ComputeBuffer(2, 8 * sizeof(float));
 
@@ -365,18 +366,31 @@ public class FFTWater : MonoBehaviour {
         fftComputeShader.SetTexture(2, "_InitialSpectrumTex", initialSpectrumTex);
         fftComputeShader.SetTexture(2, "_HTildeSlopeTex", htildeSlopeTex);
         fftComputeShader.SetTexture(2, "_HTildeDisplacementTex", htildeDisplacementTex);
+        fftComputeShader.SetTexture(2, "_SpectrumTextures", spectrumTextures);
         fftComputeShader.Dispatch(2, threadGroupsX, threadGroupsY, 1);
 
         // Compute FFT For Height
-        InverseFFT(htildeSlopeTex, htildeDisplacementTex);
+        InverseFFT(spectrumTextures);
 
         // Assemble maps
         fftComputeShader.SetTexture(7, "_HTildeSlopeTex", htildeSlopeTex);
         fftComputeShader.SetTexture(7, "_HTildeDisplacementTex", htildeDisplacementTex);
         fftComputeShader.SetTexture(7, "_DisplacementTex", displacementTex);
+        fftComputeShader.SetTexture(7, "_SpectrumTextures", spectrumTextures);
         fftComputeShader.SetTexture(7, "_NormalTex", normalTex);
         fftComputeShader.SetTexture(7, "_MomentTex", momentTex);
         fftComputeShader.Dispatch(7, threadGroupsX, threadGroupsY, 1);
+
+        
+        displacementTex.GenerateMips();
+        normalTex.GenerateMips();
+        momentTex.GenerateMips();
+
+        
+
+
+        fftComputeShader.SetTexture(8, "_SpectrumTextures", spectrumTextures);
+        //fftComputeShader.Dispatch(8, threadGroupsX, threadGroupsY, 1);
 
         //Graphics.Blit(foamTex, pingPongTex);
 
@@ -387,6 +401,7 @@ public class FFTWater : MonoBehaviour {
         waterMaterial.SetTexture("_DisplacementTex", displacementTex);
         waterMaterial.SetTexture("_NormalTex", normalTex);
         waterMaterial.SetTexture("_MomentTex", momentTex);
+        waterMaterial.SetTexture("_SpectrumTextures", spectrumTextures);
 
         if (useTextureForFresnel) {
             waterMaterial.SetTexture("_EnvironmentMap", environmentTexture);

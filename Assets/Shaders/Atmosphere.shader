@@ -73,18 +73,18 @@ Shader "Hidden/Atmosphere" {
 
                 float3 curl = normalize(_SkyboxDirection);
 
-                float3 uvw = -viewDir;
                 float t = _Time.y * _SkyboxSpeed;
 
                 float4 uvw1 = flowUVW(-viewDir, curl, t, false);
                 float4 uvw2 = flowUVW(-viewDir, curl, t, true);
+                
 
                 float3 sky = texCUBE(_SkyboxTex, uvw1.xyz).rgb * uvw1.w;
                 float3 sky2 = texCUBE(_SkyboxTex, uvw2.xyz).rgb * uvw2.w;
 
                 sky = (sky + sky2);
 
-                //if (depth == 0) col.rgb = sky;
+                if (depth == 0) col.rgb = sky;
 
                 float height = min(_FogHeight, worldPos.y) / _FogHeight;
                 height = pow(saturate(height), 1.0f / _FogAttenuation);

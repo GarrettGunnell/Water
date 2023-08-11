@@ -359,8 +359,8 @@ MonoBehaviour:
   shininess: 1
   specularNormalStrength: 1
   fresnelColor: {r: 0, g: 0, b: 0, a: 0}
-  useTextureForFresnel: 0
-  environmentTexture: {fileID: 0}
+  useTextureForFresnel: 1
+  environmentTexture: {fileID: 8900000, guid: 6fa3f446deee84c52aec507bd0aca28c, type: 3}
   fresnelBias: 0
   fresnelStrength: 1
   fresnelShininess: 5
@@ -896,9 +896,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   atmosphereShader: {fileID: 4800000, guid: a9a6dcce863cdff4698e8d702def982d, type: 3}
-  skyboxTex: {fileID: 8900000, guid: 8a293ce833d584fc98516e0e74f495a4, type: 3}
+  skyboxTex: {fileID: 8900000, guid: 6fa3f446deee84c52aec507bd0aca28c, type: 3}
   skyboxDirection: {x: 0, y: -1, z: 0}
-  skyboxSpeed: 0.05
+  skyboxSpeed: 0
   sunDirection: {x: 0, y: -1, z: -6}
   sunColor: {r: 1, g: 1, b: 1, a: 0}
   fogHeight: 500
@@ -941,7 +941,9 @@ MonoBehaviour:
   debugShader: {fileID: 4800000, guid: 85168c726e7b2e94498b6be5a0caebfc, type: 3}
   fftWater: {fileID: 19044813}
   debugTexture: 0
-  channels: {x: 1, y: 0, z: 0}
+  channels: {x: 1, y: 1, z: 1}
+  mipLevel: 0
+  linear: 1
   showAlpha: 0
   absolute: 0
   exposure: 1

@@ -16,6 +16,7 @@ RWTexture2D<float> _FoamTex;
 Texture2D<float2> _PingTex;
 
 RWTexture2D<float4> _HTildeSlopeTex, _HTildeDisplacementTex;
+RWTexture2DArray<float4> _SpectrumTextures;
 
 float _FrameTime, _DeltaTime, _A, _Gravity, _RepeatTime, _Damping, _Depth, _LowCutoff, _HighCutoff;
 int _Seed;
@@ -214,8 +215,11 @@ void CS_UpdateSpectrumForFFT(uint3 id : SV_DISPATCHTHREADID) {
     float2 htildeSlopeX = float2(displacementY_dx.x - displacementY_dz.y, displacementY_dx.y + displacementY_dz.x);
     float2 htildeSlopeZ = float2(displacementX_dx.x - displacementZ_dz.y, displacementX_dx.y + displacementZ_dz.x);
 
-    _HTildeDisplacementTex[id.xy] = float4(htildeDisplacementX, htildeDisplacementZ);
-    _HTildeSlopeTex[id.xy] = float4(htildeSlopeX, htildeSlopeZ);
+    _SpectrumTextures[uint3(id.xy, 0)] = float4(htildeDisplacementX, htildeDisplacementZ);
+    _SpectrumTextures[uint3(id.xy, 1)] = float4(htildeSlopeX, htildeSlopeZ);
+
+    //_HTildeDisplacementTex[id.xy] = float4(htildeDisplacementX, htildeDisplacementZ);
+    //_HTildeSlopeTex[id.xy] = float4(htildeSlopeX, htildeSlopeZ);
 }
 
 float2 ComplexExp(float2 a) {
@@ -237,7 +241,7 @@ float4 ComputeTwiddleFactorAndInputIndices(uint2 id) {
 #define SIZE 1024
 #define LOG_SIZE 10
 
-RWTexture2D<float4> _FourierTarget;
+RWTexture2DArray<float4> _FourierTarget;
 bool _Direction;
 
 groupshared float4 fftGroupBuffer[2][SIZE];
@@ -277,12 +281,14 @@ float4 FFT(uint threadIndex, float4 input) {
 
 [numthreads(SIZE, 1, 1)]
 void CS_HorizontalFFT(uint3 id : SV_DISPATCHTHREADID) {
-    _FourierTarget[id.xy] = FFT(id.x, _FourierTarget[id.xy]);
+    _FourierTarget[uint3(id.xy, 0)] = FFT(id.x, _FourierTarget[uint3(id.xy, 0)]);
+    _FourierTarget[uint3(id.xy, 1)] = FFT(id.x, _FourierTarget[uint3(id.xy, 1)]);
 }
 
 [numthreads(SIZE, 1, 1)]
 void CS_VerticalFFT(uint3 id : SV_DISPATCHTHREADID) {
-    _FourierTarget[id.yx] = FFT(id.x, _FourierTarget[id.yx]);
+    _FourierTarget[uint3(id.yx, 0)] = FFT(id.x, _FourierTarget[uint3(id.yx, 0)]);
+    _FourierTarget[uint3(id.yx, 1)] = FFT(id.x, _FourierTarget[uint3(id.yx, 1)]);
 }
 
 [numthreads(8,8,1)]
@@ -364,8 +370,10 @@ float4 Permute(float4 data, float2 id) {
 
 [numthreads(8, 8, 1)]
 void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
-    float4 htildeSlope = Permute(_HTildeSlopeTex[id.xy], id);
-    float4 htildeDisplacement = Permute(_HTildeDisplacementTex[id.xy], id);
+    //float4 htildeSlope = Permute(_HTildeSlopeTex[id.xy], id);
+    //float4 htildeDisplacement = Permute(_HTildeDisplacementTex[id.xy], id);
+    float4 htildeSlope = Permute(_SpectrumTextures[uint3(id.xy, 1)], id);
+    float4 htildeDisplacement = Permute(_SpectrumTextures[uint3(id.xy, 0)], id);
 
     float2 dxdz = htildeDisplacement.rg;
     float2 dydxz = htildeDisplacement.ba;
@@ -402,21 +410,9 @@ float gaussian(int x, int y) {
 
 SamplerState linear_repeat_sampler;
 
+
+
 [numthreads(8, 8, 1)]
 void CS_AccumulateFoam(uint3 id : SV_DISPATCHTHREADID) {
-    float foam = 0.0f;
-    float kernelSum = 0.0f;
-
-    int _KernelSize = 1;
-    float2 uv = ((float2(id.xy)) / _N) % _N;
-    /*
-    for (int x = -_KernelSize; x <= _KernelSize; ++x) {
-        for (int y = -_KernelSize; y <= _KernelSize; ++y) {
-            int2 uv = (id.xy + int2(x, y)) % _N;
-            foam += _PingTex[uv].r * gaussian(x, y);
-            kernelSum += gaussian(x, y);
-        }
-    }
-    */
-    _FoamTex[id.xy] = _PingTex[id.xy].r;
+    _SpectrumTextures[uint3(id.xy, 1)] = 0;
 }

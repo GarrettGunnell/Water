@@ -6,7 +6,7 @@ Shader "Custom/FFTWater" {
 
 	CGINCLUDE
         #define _TessellationEdgeLength 10
-		//#define NEW_LIGHTING
+		#define NEW_LIGHTING
 
         struct TessellationFactors {
             float edge[3] : SV_TESSFACTOR;
@@ -96,6 +96,7 @@ Shader "Custom/FFTWater" {
 			sampler2D _CameraDepthTexture;
             Texture2D _DisplacementTex, _NormalTex, _MomentTex;
             SamplerState point_repeat_sampler, linear_repeat_sampler;
+			Texture2DArray _SpectrumTextures;
 
             float _Tile;
 
@@ -183,10 +184,39 @@ Shader "Custom/FFTWater" {
                 return vp(data);
             }
 
-			float3 ComputeWorldSpacePosition(float2 positionNDC, float deviceDepth) {
-				float4 positionCS = float4(positionNDC * 2.0 - 1.0, deviceDepth, 1.0);
-				float4 hpositionWS = mul(_CameraInvViewProjection, positionCS);
-				return hpositionWS.xyz / hpositionWS.w;
+			#define ax 0.3f
+			#define ay 0.3f
+
+			float Beckmann(float2 slopes, float denominator) {
+				float c = 1.0f / PI * ax * ay;
+
+				float2 slopeSquares = slopes * slopes;
+				float2 roughnessSquares = float2(ax, ay) * float2(ax, ay);
+
+				float p22 = c * exp(-(slopeSquares.x / roughnessSquares.x) - (slopeSquares.y / roughnessSquares.y));
+
+				return p22 / denominator;
+			}
+
+			float SchlickFresnel(float3 normal, float3 viewDir) {
+				// 0.02f comes from the reflectivity bias of water kinda idk it's from a paper somewhere i'm not gonna link it tho 
+				return 0.02f + (1 - 0.02f) * (pow(1 - DotClamped(normal, viewDir), 5.0f));
+			}
+
+			float ProjectedAnisotropicRoughness(float3 v) {
+				float phi = acos(v.x);
+
+				float cosPhi = cos(phi);
+				float sinPhi = sin(phi);
+
+				return sqrt(ax * ax * cosPhi * cosPhi + ay * ay * sinPhi * sinPhi);
+			}
+
+			float SmithMaskingBeckmann(float roughness, float HdotV) {
+				float a = HdotV / roughness * sqrt(1 - HdotV * HdotV);
+				float a2 = a * a;
+
+				return a < 1.6f ? (1.0f - 1.259f * a + 0.396f * a2) / (3.535f * a + 2.181 * a2) : 0.0f;
 			}
 
 			float4 fp(g2f f) : SV_TARGET {
@@ -194,19 +224,58 @@ Shader "Custom/FFTWater" {
                 float3 viewDir = normalize(_WorldSpaceCameraPos - f.data.worldPos);
                 float3 halfwayDir = normalize(lightDir + viewDir);
 
+				float LdotH = DotClamped(lightDir, halfwayDir);
+				float VdotH = DotClamped(viewDir, halfwayDir);
+
 				float4 slopesFoamJacobian = _NormalTex.Sample(linear_repeat_sampler, f.data.uv * _Tile);
 				float3 secondOrderMomentsCovariance = _MomentTex.Sample(linear_repeat_sampler, f.data.uv * _Tile);
 
+				float4 idk = _SpectrumTextures.Sample(point_repeat_sampler, float3(f.data.uv * _Tile, 1));
+
+
 				
-				// I say slopes here but the slope is also the first order moment
+				// I say slopes here but the slope is also the first order moment aka the expected value
 				float2 slopes = slopesFoamJacobian.xy;
+				slopes *= _NormalStrength;
 				float2 secondMoments = secondOrderMomentsCovariance.rg;
 				float covariance = secondOrderMomentsCovariance.b;
 				float foam = slopesFoamJacobian.b;
 
 				#ifdef NEW_LIGHTING
-				// covariance matrix
-				float3 output = 0.0f;
+				float3 macroNormal = float3(0, 1, 0);
+				float3 mesoNormal = normalize(float3(-slopes.x, 1.0f, -slopes.y));
+
+				float beckmannDenominator = pow(dot(mesoNormal, macroNormal), 4.0f);
+
+				float NdotL = DotClamped(mesoNormal, lightDir);
+
+
+				//specular = Lsun * brdf * cos
+				
+				float2 halfwayDirSlope = -halfwayDir.xz / halfwayDir.y;
+
+				float eta = 1.33f;
+				float R = ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1));
+				float thetaV = acos(viewDir.y);
+
+				float av = ProjectedAnisotropicRoughness(viewDir);
+
+				float numerator = pow(1 - cos(thetaV), 5 * exp(-2.69 * av));
+				float F = R + (1 - R) * numerator / (1.0f + 22.7f * pow(av, 1.5f));
+				
+				float G = (1.0f + SmithMaskingBeckmann(ProjectedAnisotropicRoughness(lightDir), LdotH) + SmithMaskingBeckmann(av, VdotH));
+
+				float3 specular = _SpecularReflectance * SchlickFresnel(halfwayDir, lightDir) * Beckmann(halfwayDirSlope, beckmannDenominator);
+				specular /= 4.0f * G;
+				specular *= (DotClamped(mesoNormal, macroNormal) /  DotClamped(macroNormal, viewDir));
+				
+
+				float3 reflectedDir = reflect(-viewDir, mesoNormal);
+
+				float3 envReflection = texCUBE(_EnvironmentMap, reflectedDir).rgb;
+
+				float3 output = (1 - F) * _FresnelColor + specular + F * envReflection;
+				output = lerp(output, _TipColor, saturate(foam));
 				#else
 				slopes *= _NormalStrength;
 				float3 normal = normalize(float3(-slopes.x, 1.0f, -slopes.y));
