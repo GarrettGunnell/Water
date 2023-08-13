@@ -33,6 +33,45 @@ Shader "Custom/FFTWater" {
                    TriangleIsBelowClipPlane(p0, p1, p2, 2, bias) ||
                    TriangleIsBelowClipPlane(p0, p1, p2, 3, bias);
         }
+
+		// https://gist.github.com/TheRealMJP/c83b8c0f46b63f3a88a5986f4fa982b1
+		float4 SampleTextureCatmullRom(in Texture2D<float4> tex, in SamplerState linearSampler, in float2 uv, in float2 texSize) {
+			float2 samplePos = uv * texSize;
+			float2 texPos1 = floor(samplePos - 0.5f) + 0.5f;
+
+			float2 f = samplePos - texPos1;
+
+			float2 w0 = f * (-0.5f + f * (1.0f - 0.5f * f));
+			float2 w1 = 1.0f + f * f * (-2.5f + 1.5f * f);
+			float2 w2 = f * (0.5f + f * (2.0f - 1.5f * f));
+			float2 w3 = f * f * (-0.5f + 0.5f * f);
+
+			float2 w12 = w1 + w2;
+			float2 offset12 = w2 / (w1 + w2);
+
+			float2 texPos0 = texPos1 - 1;
+			float2 texPos3 = texPos1 + 2;
+			float2 texPos12 = texPos1 + offset12;
+
+			texPos0 /= texSize;
+			texPos3 /= texSize;
+			texPos12 /= texSize;
+
+			float4 result = 0.0f;
+			result += tex.Sample(linearSampler, float2(texPos0.x, texPos0.y)) * w0.x * w0.y;
+			result += tex.Sample(linearSampler, float2(texPos12.x, texPos0.y)) * w12.x * w0.y;
+			result += tex.Sample(linearSampler, float2(texPos3.x, texPos0.y)) * w3.x * w0.y;
+
+			result += tex.Sample(linearSampler, float2(texPos0.x, texPos12.y)) * w0.x * w12.y;
+			result += tex.Sample(linearSampler, float2(texPos12.x, texPos12.y)) * w12.x * w12.y;
+			result += tex.Sample(linearSampler, float2(texPos3.x, texPos12.y)) * w3.x * w12.y;
+
+			result += tex.Sample(linearSampler, float2(texPos0.x, texPos3.y)) * w0.x * w3.y;
+			result += tex.Sample(linearSampler, float2(texPos12.x, texPos3.y)) * w12.x * w3.y;
+			result += tex.Sample(linearSampler, float2(texPos3.x, texPos3.y)) * w3.x * w3.y;
+
+			return result;
+		}
     ENDCG
 
 	SubShader {
@@ -95,7 +134,7 @@ Shader "Custom/FFTWater" {
 			float4x4 _CameraInvViewProjection;
 			sampler2D _CameraDepthTexture;
             Texture2D _DisplacementTex, _NormalTex, _MomentTex;
-            SamplerState point_repeat_sampler, linear_repeat_sampler;
+            SamplerState point_repeat_sampler, linear_repeat_sampler, trilinear_repeat_sampler;
 			Texture2DArray _SpectrumTextures;
 
             float _Tile;
@@ -111,7 +150,7 @@ Shader "Custom/FFTWater" {
 			v2g vp(VertexData v) {
 				v2g g;
                 g.worldPos = mul(unity_ObjectToWorld, v.vertex);
-				float3 displacement = _DisplacementTex.SampleLevel(linear_repeat_sampler, v.uv * _Tile, 0).rgb;
+				float3 displacement = _DisplacementTex.SampleLevel(linear_repeat_sampler, v.uv * _Tile, 0).rgb * 2;
 
 				v.vertex.xyz += mul(unity_WorldToObject, displacement.xyz);
                 g.pos = UnityObjectToClipPos(v.vertex);
@@ -184,39 +223,34 @@ Shader "Custom/FFTWater" {
                 return vp(data);
             }
 
-			#define ax 0.3f
-			#define ay 0.3f
+			#define ax 0.13f
+			#define ay 0.13f
 
-			float Beckmann(float2 slopes, float denominator) {
-				float c = 1.0f / PI * ax * ay;
+			float Beckmann(float ndoth, float roughness) {
+				float exp_arg = (ndoth * ndoth - 1) / (roughness * roughness * ndoth * ndoth);
 
-				float2 slopeSquares = slopes * slopes;
-				float2 roughnessSquares = float2(ax, ay) * float2(ax, ay);
-
-				float p22 = c * exp(-(slopeSquares.x / roughnessSquares.x) - (slopeSquares.y / roughnessSquares.y));
-
-				return p22 / denominator;
+				return exp(exp_arg) / (PI * roughness * roughness * ndoth * ndoth * ndoth * ndoth);
 			}
 
 			float SchlickFresnel(float3 normal, float3 viewDir) {
-				// 0.02f comes from the reflectivity bias of water kinda idk it's from a paper somewhere i'm not gonna link it tho 
+				// 0.02f comes from the reflectivity bias of water kinda idk it's from a paper somewhere i'm not gonna link it tho lmaooo
 				return 0.02f + (1 - 0.02f) * (pow(1 - DotClamped(normal, viewDir), 5.0f));
 			}
 
-			float ProjectedAnisotropicRoughness(float3 v) {
-				float phi = acos(v.x);
-
-				float cosPhi = cos(phi);
-				float sinPhi = sin(phi);
-
-				return sqrt(ax * ax * cosPhi * cosPhi + ay * ay * sinPhi * sinPhi);
-			}
-
-			float SmithMaskingBeckmann(float roughness, float HdotV) {
-				float a = HdotV / roughness * sqrt(1 - HdotV * HdotV);
+			float SmithMaskingBeckmann(float3 H, float3 S, float roughness) {
+				float hdots = max(0.001f, DotClamped(H, S));
+				float a = hdots / (roughness * sqrt(1 - hdots * hdots));
 				float a2 = a * a;
 
 				return a < 1.6f ? (1.0f - 1.259f * a + 0.396f * a2) / (3.535f * a + 2.181 * a2) : 0.0f;
+			}
+
+			float SmithMaskingGGX(float3 H, float3 S, float roughness) {
+				float hdots = max(0.001f, DotClamped(H, S));
+
+				float a = hdots / (roughness * sqrt(1 - hdots * hdots));
+
+				return rcp(1.0f + (0.5f * (-1.0f + sqrt(1.0f + rcp(a * a)))));
 			}
 
 			float4 fp(g2f f) : SV_TARGET {
@@ -224,58 +258,61 @@ Shader "Custom/FFTWater" {
                 float3 viewDir = normalize(_WorldSpaceCameraPos - f.data.worldPos);
                 float3 halfwayDir = normalize(lightDir + viewDir);
 
+				float depth = Linear01Depth(f.data.pos.z / f.data.pos.w);
 				float LdotH = DotClamped(lightDir, halfwayDir);
 				float VdotH = DotClamped(viewDir, halfwayDir);
 
-				float4 slopesFoamJacobian = _NormalTex.Sample(linear_repeat_sampler, f.data.uv * _Tile);
-				float3 secondOrderMomentsCovariance = _MomentTex.Sample(linear_repeat_sampler, f.data.uv * _Tile);
+				float4 slopesFoamJacobian = _NormalTex.Sample(trilinear_repeat_sampler, f.data.uv * _Tile);
 
-				float4 idk = _SpectrumTextures.Sample(point_repeat_sampler, float3(f.data.uv * _Tile, 1));
-
-
+				float4 asd = SampleTextureCatmullRom(_NormalTex, trilinear_repeat_sampler, f.data.uv * _Tile, 1024);
+				//float4 idk = _SpectrumTextures.Sample(point_repeat_sampler, float3(f.data.uv * _Tile, 1));
 				
 				// I say slopes here but the slope is also the first order moment aka the expected value
 				float2 slopes = slopesFoamJacobian.xy;
 				slopes *= _NormalStrength;
-				float2 secondMoments = secondOrderMomentsCovariance.rg;
-				float covariance = secondOrderMomentsCovariance.b;
-				float foam = slopesFoamJacobian.b;
+				float foam = lerp(slopesFoamJacobian.z, 0.0f, depth * depth);
 
 				#ifdef NEW_LIGHTING
 				float3 macroNormal = float3(0, 1, 0);
 				float3 mesoNormal = normalize(float3(-slopes.x, 1.0f, -slopes.y));
 
-				float beckmannDenominator = pow(dot(mesoNormal, macroNormal), 4.0f);
-
 				float NdotL = DotClamped(mesoNormal, lightDir);
 
-
-				//specular = Lsun * brdf * cos
 				
-				float2 halfwayDirSlope = -halfwayDir.xz / halfwayDir.y;
+				float a = 0.2f + foam;
+				float ndoth = max(0.0001f, dot(mesoNormal, halfwayDir));
 
-				float eta = 1.33f;
-				float R = ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1));
-				float thetaV = acos(viewDir.y);
-
-				float av = ProjectedAnisotropicRoughness(viewDir);
-
-				float numerator = pow(1 - cos(thetaV), 5 * exp(-2.69 * av));
-				float F = R + (1 - R) * numerator / (1.0f + 22.7f * pow(av, 1.5f));
+				float viewMask = SmithMaskingBeckmann(mesoNormal, viewDir, a);
+				float lightMask = SmithMaskingBeckmann(mesoNormal, lightDir, a);
 				
-				float G = (1.0f + SmithMaskingBeckmann(ProjectedAnisotropicRoughness(lightDir), LdotH) + SmithMaskingBeckmann(av, VdotH));
+				float G = rcp(1 + viewMask + lightMask);
 
-				float3 specular = _SpecularReflectance * SchlickFresnel(halfwayDir, lightDir) * Beckmann(halfwayDirSlope, beckmannDenominator);
-				specular /= 4.0f * G;
-				specular *= (DotClamped(mesoNormal, macroNormal) /  DotClamped(macroNormal, viewDir));
+				float F = SchlickFresnel(mesoNormal, viewDir);
+
+				float3 specular = _SpecularReflectance * F * G * Beckmann(ndoth, a);
+				specular /= 4.0f * max(0.001f, DotClamped(macroNormal, lightDir));
+				specular *= NdotL;
+
+				float3 envReflection = texCUBE(_EnvironmentMap, reflect(-viewDir, mesoNormal)).rgb;
+
+				float H = max(0.0f, _DisplacementTex.Sample(trilinear_repeat_sampler, f.data.uv * _Tile).y);
+				float3 scatterColor = _Ambient;
+				float3 bubbleColor = _FresnelColor;
+				float bubbleDensity = 0.5f;
+
 				
+				float k1 = 1.0f * H * pow(DotClamped(lightDir, -viewDir), 4.0f) * pow(0.5f - 0.5f * dot(lightDir, mesoNormal), 3.0f);
+				float k2 = 1.0f * pow(DotClamped(viewDir, mesoNormal), 2.0f);
+				float k3 = 1.0f * NdotL;
+				float k4 = 1.0f * bubbleDensity;
 
-				float3 reflectedDir = reflect(-viewDir, mesoNormal);
+				float3 scatter = (k1 + k2) * scatterColor * _SpecularReflectance * rcp(1 + lightMask);
+				scatter += k3 * scatterColor * _SpecularReflectance + k4 * bubbleColor * _SpecularReflectance;
 
-				float3 envReflection = texCUBE(_EnvironmentMap, reflectedDir).rgb;
-
-				float3 output = (1 - F) * _FresnelColor + specular + F * envReflection;
+				
+				float3 output = (1 - F) * scatter + specular + F * envReflection;
 				output = lerp(output, _TipColor, saturate(foam));
+				
 				#else
 				slopes *= _NormalStrength;
 				float3 normal = normalize(float3(-slopes.x, 1.0f, -slopes.y));
