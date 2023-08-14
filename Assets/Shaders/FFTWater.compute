@@ -3,8 +3,6 @@
 #pragma kernel CS_UpdateSpectrumForFFT
 #pragma kernel CS_HorizontalFFT
 #pragma kernel CS_VerticalFFT
-#pragma kernel CS_VerticalStepInverseFFT_Ping
-#pragma kernel CS_VerticalStepInverseFFT_Pong
 #pragma kernel CS_AssembleMaps
 #pragma kernel CS_AccumulateFoam
 
@@ -289,79 +287,6 @@ void CS_HorizontalFFT(uint3 id : SV_DISPATCHTHREADID) {
 void CS_VerticalFFT(uint3 id : SV_DISPATCHTHREADID) {
     _FourierTarget[uint3(id.yx, 0)] = FFT(id.x, _FourierTarget[uint3(id.yx, 0)]);
     _FourierTarget[uint3(id.yx, 1)] = FFT(id.x, _FourierTarget[uint3(id.yx, 1)]);
-}
-
-[numthreads(8,8,1)]
-void CS_VerticalStepInverseFFT_Ping(uint3 id : SV_DISPATCHTHREADID) {
-    float4 data = ComputeTwiddleFactorAndInputIndices(uint2(_Step, id.y));
-
-    uint2 inputsIndices = (uint2)data.ba;
-
-    // First FFT Pair
-    float4 x = _Buffer0[uint2(id.x, inputsIndices.x)];
-    float4 y = _Buffer0[uint2(id.x, inputsIndices.y)];
-
-    float2 x1 = x.rg;
-    float2 y1 = y.rg;
-    float2 x2 = x.ba;
-    float2 y2 = y.ba;
-
-    float2 output1 = x1 + ComplexMult(float2(data.r, -data.g), y1);
-    float2 output2 = x2 + ComplexMult(float2(data.r, -data.g), y2);
-
-    _Buffer1[id.xy] = float4(output1, output2);
-
-    // Second FFT Pair
-    float4 z = _Buffer2[uint2(id.x, inputsIndices.x)];
-    float4 w = _Buffer2[uint2(id.x, inputsIndices.y)];
-
-    float2 z1 = z.rg;
-    float2 w1 = w.rg;
-    float2 z2 = z.ba;
-    float2 w2 = w.ba;
-
-    float2 output3 = z1 + ComplexMult(float2(data.r, -data.g), w1);
-    float2 output4 = z2 + ComplexMult(float2(data.r, -data.g), w2);
-
-    _Buffer3[id.xy] = float4(output3, output4);
-}
-
-[numthreads(8, 8, 1)]
-void CS_VerticalStepInverseFFT_Pong(uint3 id : SV_DISPATCHTHREADID) {    
-    float4 data = ComputeTwiddleFactorAndInputIndices(uint2(_Step, id.y));
-
-    uint2 inputsIndices = (uint2)data.ba;
-
-    // First FFT Pair
-    float4 x = 0.0f;
-    float4 y = 0.0f;
-
-    x = _Buffer1[uint2(id.x, inputsIndices.x)];
-    y = _Buffer1[uint2(id.x, inputsIndices.y)];
-
-    float2 x1 = x.rg;
-    float2 y1 = y.rg;
-    float2 x2 = x.ba;
-    float2 y2 = y.ba;
-
-    float2 output1 = x1 + ComplexMult(float2(data.r, -data.g), y1);
-    float2 output2 = x2 + ComplexMult(float2(data.r, -data.g), y2);
-
-    _Buffer0[id.xy] = float4(output1, output2);
-    
-    // Second FFT Pair
-    float4 z = _Buffer3[uint2(id.x, inputsIndices.x)];
-    float4 w = _Buffer3[uint2(id.x, inputsIndices.y)];
-
-    float2 z1 = z.rg;
-    float2 w1 = w.rg;
-    float2 z2 = z.ba;
-    float2 w2 = w.ba;
-
-    float2 output3 = z1 + ComplexMult(float2(data.r, -data.g), w1);
-    float2 output4 = z2 + ComplexMult(float2(data.r, -data.g), w2);
-
-    _Buffer2[id.xy] = float4(output3, output4);
 }
 
 float4 Permute(float4 data, float2 id) {

@@ -373,13 +373,13 @@ public class FFTWater : MonoBehaviour {
         InverseFFT(spectrumTextures);
 
         // Assemble maps
-        fftComputeShader.SetTexture(7, "_HTildeSlopeTex", htildeSlopeTex);
-        fftComputeShader.SetTexture(7, "_HTildeDisplacementTex", htildeDisplacementTex);
-        fftComputeShader.SetTexture(7, "_DisplacementTex", displacementTex);
-        fftComputeShader.SetTexture(7, "_SpectrumTextures", spectrumTextures);
-        fftComputeShader.SetTexture(7, "_NormalTex", normalTex);
-        fftComputeShader.SetTexture(7, "_MomentTex", momentTex);
-        fftComputeShader.Dispatch(7, threadGroupsX, threadGroupsY, 1);
+        fftComputeShader.SetTexture(5, "_HTildeSlopeTex", htildeSlopeTex);
+        fftComputeShader.SetTexture(5, "_HTildeDisplacementTex", htildeDisplacementTex);
+        fftComputeShader.SetTexture(5, "_DisplacementTex", displacementTex);
+        fftComputeShader.SetTexture(5, "_SpectrumTextures", spectrumTextures);
+        fftComputeShader.SetTexture(5, "_NormalTex", normalTex);
+        fftComputeShader.SetTexture(5, "_MomentTex", momentTex);
+        fftComputeShader.Dispatch(5, threadGroupsX, threadGroupsY, 1);
 
         
         displacementTex.GenerateMips();
@@ -389,7 +389,7 @@ public class FFTWater : MonoBehaviour {
         
 
 
-        fftComputeShader.SetTexture(8, "_SpectrumTextures", spectrumTextures);
+        //fftComputeShader.SetTexture(8, "_SpectrumTextures", spectrumTextures);
         //fftComputeShader.Dispatch(8, threadGroupsX, threadGroupsY, 1);
 
         //Graphics.Blit(foamTex, pingPongTex);
