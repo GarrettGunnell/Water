@@ -256,21 +256,22 @@ Shader "Custom/FFTWater" {
 				float depth = f.data.depth;
 				float LdotH = DotClamped(lightDir, halfwayDir);
 				float VdotH = DotClamped(viewDir, halfwayDir);
-
+				
+				float4 displacementFoam = _DisplacementTex.Sample(trilinear_repeat_sampler, f.data.uv * _Tile);
 				float4 slopesFoamJacobian = _NormalTex.Sample(trilinear_repeat_sampler, f.data.uv * _Tile);
 
-				float4 asd = SampleTextureCatmullRom(_NormalTex, trilinear_repeat_sampler, f.data.uv * _Tile, 1024);
 				//float4 idk = _SpectrumTextures.Sample(point_repeat_sampler, float3(f.data.uv * _Tile, 1));
 				
 				// I say slopes here but the slope is also the first order moment aka the expected value
 				float2 slopes = slopesFoamJacobian.xy;
 				slopes *= _NormalStrength;
-				float foam = lerp(0.0f, slopesFoamJacobian.z, pow(depth, 5.0f));
+				float foam = lerp(0.0f, displacementFoam.a, pow(depth, 5.0f));
 
 				#ifdef NEW_LIGHTING
 				float3 macroNormal = float3(0, 1, 0);
 				float3 mesoNormal = normalize(float3(-slopes.x, 1.0f, -slopes.y));
 				mesoNormal = normalize(lerp(float3(0, 1, 0), mesoNormal, depth * depth * depth));
+				mesoNormal = normalize(UnityObjectToWorldNormal(normalize(mesoNormal)));
 
 				float NdotL = DotClamped(mesoNormal, lightDir);
 
@@ -287,10 +288,9 @@ Shader "Custom/FFTWater" {
 				float R = ((eta - 1) * (eta - 1)) / ((eta + 1) * (eta + 1));
 				float thetaV = acos(viewDir.y);
 
-				float av = a;
-
-				float numerator = pow(1 - cos(thetaV), 5 * exp(-2.69 * av));
-				float F = R + (1 - R) * numerator / (1.0f + 22.7f * pow(av, 1.5f));
+				float numerator = pow(1 - cos(thetaV), 5 * exp(-2.69 * a));
+				float F = R + (1 - R) * numerator / (1.0f + 22.7f * pow(a, 1.5f));
+				//F *= SchlickFresnel(mesoNormal, viewDir);
 				
 				float3 specular = _SpecularReflectance * F * G * Beckmann(ndoth, a);
 				specular /= 4.0f * max(0.001f, DotClamped(macroNormal, lightDir));
@@ -298,15 +298,15 @@ Shader "Custom/FFTWater" {
 
 				float3 envReflection = texCUBE(_EnvironmentMap, reflect(-viewDir, mesoNormal)).rgb;
 
-				float H = max(0.0f, _DisplacementTex.Sample(trilinear_repeat_sampler, f.data.uv * _Tile).y);
+				float H = max(0.0f, displacementFoam.y) * 10;
 				float3 scatterColor = _Ambient;
 				float3 bubbleColor = _FresnelColor;
 				float bubbleDensity = 0.5f;
 
 				
-				float k1 = 1.0f * H * pow(DotClamped(lightDir, -viewDir), 4.0f) * pow(0.5f - 0.5f * dot(lightDir, mesoNormal), 3.0f);
+				float k1 = 2.0f * H * pow(DotClamped(lightDir, -viewDir), 4.0f) * pow(0.5f - 0.5f * dot(lightDir, mesoNormal), 3.0f);
 				float k2 = 1.0f * pow(DotClamped(viewDir, mesoNormal), 2.0f);
-				float k3 = 1.0f * NdotL;
+				float k3 = 0.75f * NdotL;
 				float k4 = 1.0f * bubbleDensity;
 
 				float3 scatter = (k1 + k2) * scatterColor * _SpecularReflectance * rcp(1 + lightMask);

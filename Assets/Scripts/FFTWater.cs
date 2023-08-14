@@ -92,7 +92,7 @@ public class FFTWater : MonoBehaviour {
 
 
     [Header("Material Settings")]
-    [Range(0.0f, 5.0f)]
+    [Range(0.0f, 20.0f)]
     public float normalStrength = 1;
 
     // Shader Settings
@@ -147,7 +147,6 @@ public class FFTWater : MonoBehaviour {
 
     private RenderTexture displacementTex, 
                           normalTex, 
-                          momentTex,
                           initialSpectrumTex, 
                           pingPongTex, 
                           pingPongTex2, 
@@ -177,10 +176,6 @@ public class FFTWater : MonoBehaviour {
 
     public RenderTexture GetDisplacementSpectrum() {
         return htildeDisplacementTex;
-    }
-
-    public RenderTexture GetMoments() {
-        return momentTex;
     }
 
     private void CreateWaterPlane() {
@@ -317,8 +312,7 @@ public class FFTWater : MonoBehaviour {
         pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
         pingPongTex2 = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
         displacementTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, true);
-        normalTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, true);
-        momentTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, true);
+        normalTex = CreateRenderTex(N, N, RenderTextureFormat.RGHalf, true);
 
         spectrumTextures = new RenderTexture(N, N, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
         spectrumTextures.dimension = UnityEngine.Rendering.TextureDimension.Tex2DArray;
@@ -378,13 +372,11 @@ public class FFTWater : MonoBehaviour {
         fftComputeShader.SetTexture(5, "_DisplacementTex", displacementTex);
         fftComputeShader.SetTexture(5, "_SpectrumTextures", spectrumTextures);
         fftComputeShader.SetTexture(5, "_NormalTex", normalTex);
-        fftComputeShader.SetTexture(5, "_MomentTex", momentTex);
         fftComputeShader.Dispatch(5, threadGroupsX, threadGroupsY, 1);
 
         
         displacementTex.GenerateMips();
         normalTex.GenerateMips();
-        momentTex.GenerateMips();
 
         
 
@@ -400,7 +392,6 @@ public class FFTWater : MonoBehaviour {
 
         waterMaterial.SetTexture("_DisplacementTex", displacementTex);
         waterMaterial.SetTexture("_NormalTex", normalTex);
-        waterMaterial.SetTexture("_MomentTex", momentTex);
         waterMaterial.SetTexture("_SpectrumTextures", spectrumTextures);
 
         if (useTextureForFresnel) {
@@ -432,7 +423,6 @@ public class FFTWater : MonoBehaviour {
 
         Destroy(displacementTex);
         Destroy(normalTex);
-        Destroy(momentTex);
         Destroy(initialSpectrumTex);
         Destroy(pingPongTex);
         Destroy(pingPongTex2);

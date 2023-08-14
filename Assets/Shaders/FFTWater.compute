@@ -9,7 +9,8 @@
 #define PI 3.14159265358979323846
 
 RWTexture2D<float4> _InitialSpectrumTex;
-RWTexture2D<float4> _DisplacementTex, _NormalTex, _MomentTex;
+RWTexture2D<float4> _DisplacementTex;
+RWTexture2D<float2> _NormalTex;
 RWTexture2D<float> _FoamTex;
 Texture2D<float2> _PingTex;
 
@@ -312,7 +313,7 @@ void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
     float2 slopes = dyxdyz.xy / (1 + abs(dxxdzz * _Lambda));
     float covariance = slopes.x * slopes.y;
 
-    float foam = _NormalTex[id.xy].b;
+    float foam = _DisplacementTex[id.xy].a;
     foam *= exp(-_FoamDecayRate);
     foam = saturate(foam);
 
@@ -321,9 +322,9 @@ void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
     if (biasedJacobian > _FoamThreshold)
         foam += _FoamAdd * biasedJacobian;
 
-    _DisplacementTex[id.xy] = float4(displacement, 0.0f);
-    _NormalTex[id.xy] = float4(slopes, foam, jacobian);
-    _MomentTex[id.xy] = float4(slopes * slopes, covariance, 0.0f);
+
+    _DisplacementTex[id.xy] = float4(displacement, foam);
+    _NormalTex[id.xy] = float2(slopes);
 }
 
 
