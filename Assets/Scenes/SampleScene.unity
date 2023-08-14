@@ -349,6 +349,60 @@ MonoBehaviour:
     swell: 1
     peakEnhancement: 1
     shortWavesFade: 0.0001
+  spectrum3:
+    scale: 0.321
+    windSpeed: 1.96
+    windDirection: 227
+    fetch: 100000000
+    spreadBlend: 0
+    swell: 0
+    peakEnhancement: 1
+    shortWavesFade: 0.0001
+  spectrum4:
+    scale: 0
+    windSpeed: 1
+    windDirection: 0
+    fetch: 1
+    spreadBlend: 0
+    swell: 0
+    peakEnhancement: 1
+    shortWavesFade: 0.0001
+  spectrum5:
+    scale: 0
+    windSpeed: 1
+    windDirection: 0
+    fetch: 1
+    spreadBlend: 0
+    swell: 0
+    peakEnhancement: 1
+    shortWavesFade: 0.0001
+  spectrum6:
+    scale: 0
+    windSpeed: 1
+    windDirection: 0
+    fetch: 1
+    spreadBlend: 0
+    swell: 0
+    peakEnhancement: 1
+    shortWavesFade: 0.0001
+  spectrum7:
+    scale: 0
+    windSpeed: 1
+    windDirection: 0
+    fetch: 1
+    spreadBlend: 0
+    swell: 0
+    peakEnhancement: 1
+    shortWavesFade: 0.0001
+  spectrum8:
+    scale: 0
+    windSpeed: 1
+    windDirection: 0
+    fetch: 1
+    spreadBlend: 0
+    swell: 0
+    peakEnhancement: 1
+    shortWavesFade: 0.0001
   updateSpectrum: 0
   speed: 1
   lambda: {x: 1, y: 1}
@@ -943,6 +997,7 @@ MonoBehaviour:
   debugTexture: 0
   channels: {x: 1, y: 1, z: 1}
   mipLevel: 0
+  zTexCoord: 0
   linear: 1
   showAlpha: 0
   absolute: 0

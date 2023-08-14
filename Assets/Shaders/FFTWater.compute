@@ -157,10 +157,10 @@ void CS_InitializeSpectrum(uint3 id : SV_DISPATCHTHREADID) {
 
             float dOmegadk = DispersionDerivative(kLength);
 
-            float spectrum = JONSWAP(omega, _Spectrums[i]) * DirectionSpectrum(kAngle, omega, _Spectrums[i]) * ShortWavesFade(kLength, _Spectrums[i]);
+            float spectrum = JONSWAP(omega, _Spectrums[i * 2]) * DirectionSpectrum(kAngle, omega, _Spectrums[i]) * ShortWavesFade(kLength, _Spectrums[i * 2]);
             
-            if (_Spectrums[i + 1].scale > 0)
-                spectrum += JONSWAP(omega, _Spectrums[i + 1]) * DirectionSpectrum(kAngle, omega, _Spectrums[i + 1]) * ShortWavesFade(kLength, _Spectrums[i + 1]);
+            if (_Spectrums[i * 2 + 1].scale > 0)
+                spectrum += JONSWAP(omega, _Spectrums[i * 2 + 1]) * DirectionSpectrum(kAngle, omega, _Spectrums[i * 2 + 1]) * ShortWavesFade(kLength, _Spectrums[i * 2 + 1]);
             
             _InitialSpectrumTextures[uint3(id.xy, i)] = float4(float2(gauss2.x, gauss1.y) * sqrt(2 * spectrum * abs(dOmegadk) / kLength * deltaK * deltaK), 0.0f, 0.0f);
         } else {
@@ -181,49 +181,48 @@ void CS_PackSpectrumConjugate(uint3 id : SV_DISPATCHTHREADID) {
 
 [numthreads(8, 8, 1)]
 void CS_UpdateSpectrumForFFT(uint3 id : SV_DISPATCHTHREADID) {
-    float4 initialSignal = _InitialSpectrumTextures[uint3(id.xy, 0)];
-    float2 h0 = initialSignal.xy;
-    float2 h0conj = initialSignal.zw;
+    for (int i = 0; i < 4; ++i) {
+        float4 initialSignal = _InitialSpectrumTextures[uint3(id.xy, i)];
+        float2 h0 = initialSignal.xy;
+        float2 h0conj = initialSignal.zw;
 
-    float halfN = _N / 2.0f;
-    float2 K = (id.xy - halfN) * 2.0f * PI / _LengthScale;
-    float kMag = length(K);
-    float kMagRcp = rcp(kMag);
+        float halfN = _N / 2.0f;
+        float2 K = (id.xy - halfN) * 2.0f * PI / _LengthScale;
+        float kMag = length(K);
+        float kMagRcp = rcp(kMag);
 
-    if (kMag < 0.0001f) {
-        kMagRcp = 1.0f;
+        if (kMag < 0.0001f) {
+            kMagRcp = 1.0f;
+        }
+
+        float w_0 = 2.0f * PI / _RepeatTime;
+        float dispersion = floor(sqrt(_Gravity * kMag) / w_0) * w_0 * _FrameTime;
+
+        float2 exponent = EulerFormula(dispersion);
+
+        float2 htilde = ComplexMult(h0, exponent) + ComplexMult(h0conj, float2(exponent.x, -exponent.y));
+        float2 ih = float2(-htilde.y, htilde.x);
+
+        float2 displacementX = ih * K.x * kMagRcp;
+        float2 displacementY = htilde;
+        float2 displacementZ = ih * K.y * kMagRcp;
+
+        float2 displacementX_dx = -htilde * K.x * K.x * kMagRcp;
+        float2 displacementY_dx = ih * K.x;
+        float2 displacementZ_dx = -htilde * K.x * K.y * kMagRcp;
+
+        float2 displacementY_dz = ih * K.y;
+        float2 displacementZ_dz = -htilde * K.y * K.y * kMagRcp;
+
+        float2 htildeDisplacementX = float2(displacementX.x - displacementZ.y, displacementX.y + displacementZ.x);
+        float2 htildeDisplacementZ = float2(displacementY.x - displacementZ_dx.y, displacementY.y + displacementZ_dx.x);
+        
+        float2 htildeSlopeX = float2(displacementY_dx.x - displacementY_dz.y, displacementY_dx.y + displacementY_dz.x);
+        float2 htildeSlopeZ = float2(displacementX_dx.x - displacementZ_dz.y, displacementX_dx.y + displacementZ_dz.x);
+
+        _SpectrumTextures[uint3(id.xy, i * 2)] = float4(htildeDisplacementX, htildeDisplacementZ);
+        _SpectrumTextures[uint3(id.xy, i * 2 + 1)] = float4(htildeSlopeX, htildeSlopeZ);
     }
-
-    float w_0 = 2.0f * PI / _RepeatTime;
-    float dispersion = floor(sqrt(_Gravity * kMag) / w_0) * w_0 * _FrameTime;
-
-    float2 exponent = EulerFormula(dispersion);
-
-    float2 htilde = ComplexMult(h0, exponent) + ComplexMult(h0conj, float2(exponent.x, -exponent.y));
-    float2 ih = float2(-htilde.y, htilde.x);
-
-    float2 displacementX = ih * K.x * kMagRcp;
-    float2 displacementY = htilde;
-    float2 displacementZ = ih * K.y * kMagRcp;
-
-    float2 displacementX_dx = -htilde * K.x * K.x * kMagRcp;
-    float2 displacementY_dx = ih * K.x;
-    float2 displacementZ_dx = -htilde * K.x * K.y * kMagRcp;
-
-    float2 displacementY_dz = ih * K.y;
-    float2 displacementZ_dz = -htilde * K.y * K.y * kMagRcp;
-
-    float2 htildeDisplacementX = float2(displacementX.x - displacementZ.y, displacementX.y + displacementZ.x);
-    float2 htildeDisplacementZ = float2(displacementY.x - displacementZ_dx.y, displacementY.y + displacementZ_dx.x);
-    
-    float2 htildeSlopeX = float2(displacementY_dx.x - displacementY_dz.y, displacementY_dx.y + displacementY_dz.x);
-    float2 htildeSlopeZ = float2(displacementX_dx.x - displacementZ_dz.y, displacementX_dx.y + displacementZ_dz.x);
-
-    _SpectrumTextures[uint3(id.xy, 0)] = float4(htildeDisplacementX, htildeDisplacementZ);
-    _SpectrumTextures[uint3(id.xy, 1)] = float4(htildeSlopeX, htildeSlopeZ);
-
-    //_HTildeDisplacementTex[id.xy] = float4(htildeDisplacementX, htildeDisplacementZ);
-    //_HTildeSlopeTex[id.xy] = float4(htildeSlopeX, htildeSlopeZ);
 }
 
 float2 ComplexExp(float2 a) {
@@ -285,14 +284,16 @@ float4 FFT(uint threadIndex, float4 input) {
 
 [numthreads(SIZE, 1, 1)]
 void CS_HorizontalFFT(uint3 id : SV_DISPATCHTHREADID) {
-    _FourierTarget[uint3(id.xy, 0)] = FFT(id.x, _FourierTarget[uint3(id.xy, 0)]);
-    _FourierTarget[uint3(id.xy, 1)] = FFT(id.x, _FourierTarget[uint3(id.xy, 1)]);
+    for (int i = 0; i < 8; ++i) {
+        _FourierTarget[uint3(id.xy, i)] = FFT(id.x, _FourierTarget[uint3(id.xy, i)]);
+    }
 }
 
 [numthreads(SIZE, 1, 1)]
 void CS_VerticalFFT(uint3 id : SV_DISPATCHTHREADID) {
-    _FourierTarget[uint3(id.yx, 0)] = FFT(id.x, _FourierTarget[uint3(id.yx, 0)]);
-    _FourierTarget[uint3(id.yx, 1)] = FFT(id.x, _FourierTarget[uint3(id.yx, 1)]);
+    for (int i = 0; i < 8; ++i) {
+        _FourierTarget[uint3(id.yx, i)] = FFT(id.x, _FourierTarget[uint3(id.yx, i)]);
+    }
 }
 
 float4 Permute(float4 data, float2 id) {

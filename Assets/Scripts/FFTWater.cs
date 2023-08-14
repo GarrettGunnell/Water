@@ -187,7 +187,7 @@ public class FFTWater : MonoBehaviour {
     }
 
     public RenderTexture GetDisplacementSpectrum() {
-        return htildeDisplacementTex;
+        return spectrumTextures;
     }
 
     private void CreateWaterPlane() {
