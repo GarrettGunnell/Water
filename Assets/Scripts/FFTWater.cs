@@ -33,7 +33,7 @@ public class FFTWater : MonoBehaviour {
         public float shortWavesFade; 
     }
 
-    SpectrumSettings[] spectrums = new SpectrumSettings[2];
+    SpectrumSettings[] spectrums = new SpectrumSettings[8];
 
     [System.Serializable]
     public struct DisplaySpectrumSettings {
@@ -78,9 +78,20 @@ public class FFTWater : MonoBehaviour {
 
     [SerializeField]
     public DisplaySpectrumSettings spectrum1;
-    
     [SerializeField]
     public DisplaySpectrumSettings spectrum2;
+    [SerializeField]
+    public DisplaySpectrumSettings spectrum3;
+    [SerializeField]
+    public DisplaySpectrumSettings spectrum4;
+    [SerializeField]
+    public DisplaySpectrumSettings spectrum5;
+    [SerializeField]
+    public DisplaySpectrumSettings spectrum6;
+    [SerializeField]
+    public DisplaySpectrumSettings spectrum7;
+    [SerializeField]
+    public DisplaySpectrumSettings spectrum8;
 
     public bool updateSpectrum = false;
 
@@ -147,7 +158,8 @@ public class FFTWater : MonoBehaviour {
 
     private RenderTexture displacementTex, 
                           normalTex, 
-                          initialSpectrumTex, 
+                          initialSpectrumTex,
+                          initialSpectrumTextures, 
                           pingPongTex, 
                           pingPongTex2, 
                           htildeSlopeTex, 
@@ -273,6 +285,12 @@ public class FFTWater : MonoBehaviour {
     void SetSpectrumBuffers() {
         FillSpectrumStruct(spectrum1, ref spectrums[0]);
         FillSpectrumStruct(spectrum2, ref spectrums[1]);
+        FillSpectrumStruct(spectrum3, ref spectrums[2]);
+        FillSpectrumStruct(spectrum4, ref spectrums[3]);
+        FillSpectrumStruct(spectrum5, ref spectrums[4]);
+        FillSpectrumStruct(spectrum6, ref spectrums[5]);
+        FillSpectrumStruct(spectrum7, ref spectrums[6]);
+        FillSpectrumStruct(spectrum8, ref spectrums[7]);
 
         spectrumBuffer.SetData(spectrums);
         fftComputeShader.SetBuffer(0, "_Spectrums", spectrumBuffer);
@@ -307,6 +325,12 @@ public class FFTWater : MonoBehaviour {
         threadGroupsY = Mathf.CeilToInt(N / 8.0f);
 
         initialSpectrumTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
+        initialSpectrumTextures = new RenderTexture(N, N, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+        initialSpectrumTextures.dimension = UnityEngine.Rendering.TextureDimension.Tex2DArray;
+        initialSpectrumTextures.enableRandomWrite = true;
+        initialSpectrumTextures.volumeDepth = 8;
+        initialSpectrumTextures.Create();
+
         htildeSlopeTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
         htildeDisplacementTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
         pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
@@ -317,17 +341,17 @@ public class FFTWater : MonoBehaviour {
         spectrumTextures = new RenderTexture(N, N, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
         spectrumTextures.dimension = UnityEngine.Rendering.TextureDimension.Tex2DArray;
         spectrumTextures.enableRandomWrite = true;
-        spectrumTextures.volumeDepth = 2;
+        spectrumTextures.volumeDepth = 8;
         spectrumTextures.Create();
 
-        spectrumBuffer = new ComputeBuffer(2, 8 * sizeof(float));
+        spectrumBuffer = new ComputeBuffer(8, 8 * sizeof(float));
 
         SetFFTUniforms();
         SetSpectrumBuffers();
         // Compute initial JONSWAP spectrum
-        fftComputeShader.SetTexture(0, "_InitialSpectrumTex", initialSpectrumTex);
+        fftComputeShader.SetTexture(0, "_InitialSpectrumTextures", initialSpectrumTextures);
         fftComputeShader.Dispatch(0, threadGroupsX, threadGroupsY, 1);
-        fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);
+        fftComputeShader.SetTexture(1, "_InitialSpectrumTextures", initialSpectrumTextures);
         fftComputeShader.Dispatch(1, threadGroupsX, threadGroupsY, 1);
     }
 
@@ -350,14 +374,14 @@ public class FFTWater : MonoBehaviour {
         SetFFTUniforms();
         if (updateSpectrum) {
             SetSpectrumBuffers();
-            fftComputeShader.SetTexture(0, "_InitialSpectrumTex", initialSpectrumTex);
+            fftComputeShader.SetTexture(0, "_InitialSpectrumTextures", initialSpectrumTextures);
             fftComputeShader.Dispatch(0, threadGroupsX, threadGroupsY, 1);
-            fftComputeShader.SetTexture(1, "_InitialSpectrumTex", initialSpectrumTex);
+            fftComputeShader.SetTexture(1, "_InitialSpectrumTextures", initialSpectrumTextures);
             fftComputeShader.Dispatch(1, threadGroupsX, threadGroupsY, 1);
         }
         
         // Progress Spectrum For FFT
-        fftComputeShader.SetTexture(2, "_InitialSpectrumTex", initialSpectrumTex);
+        fftComputeShader.SetTexture(2, "_InitialSpectrumTextures", initialSpectrumTextures);
         fftComputeShader.SetTexture(2, "_HTildeSlopeTex", htildeSlopeTex);
         fftComputeShader.SetTexture(2, "_HTildeDisplacementTex", htildeDisplacementTex);
         fftComputeShader.SetTexture(2, "_SpectrumTextures", spectrumTextures);
