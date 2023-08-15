@@ -323,90 +323,103 @@ MonoBehaviour:
   atmosphere: {fileID: 963194230}
   planeLength: 200
   quadRes: 2
-  lengthScale: 256
-  tile: 8
-  seed: 0
+  lengthScale: 200
+  seed: 26466
   lowCutoff: 0.0001
   highCutoff: 9000
-  gravity: 9.81
+  gravity: 12.1
   depth: 20
   repeatTime: 200
+  speed: 1
+  lambda: {x: 1, y: 1}
+  displacementDepthFalloff: 1.5
+  updateSpectrum: 0
+  tile1: 4
+  visualizeTile1: 0
+  visualizeLayer1: 1
   spectrum1:
-    scale: 0.321
-    windSpeed: 1.96
-    windDirection: 227
+    scale: 2.71
+    windSpeed: 20
+    windDirection: 22
     fetch: 100000000
-    spreadBlend: 0.842
-    swell: 0
-    peakEnhancement: 1
-    shortWavesFade: 0.0001
-  spectrum2:
-    scale: 0.321
-    windSpeed: 24.9
-    windDirection: 201
-    fetch: 10
-    spreadBlend: 0.321
+    spreadBlend: 1
     swell: 1
     peakEnhancement: 1
-    shortWavesFade: 0.0001
+    shortWavesFade: 4.34
+  spectrum2:
+    scale: 1.25
+    windSpeed: 24.9
+    windDirection: 59
+    fetch: 1000000
+    spreadBlend: 0.31
+    swell: 1
+    peakEnhancement: 1
+    shortWavesFade: 4.58
+  tile2: 12
+  visualizeTile2: 0
+  visualizeLayer2: 1
   spectrum3:
-    scale: 0.321
-    windSpeed: 1.96
-    windDirection: 227
+    scale: 0.5
+    windSpeed: 20
+    windDirection: 97
     fetch: 100000000
-    spreadBlend: 0
-    swell: 0
+    spreadBlend: 0.14
+    swell: 0.841
     peakEnhancement: 1
-    shortWavesFade: 0.0001
+    shortWavesFade: 1
   spectrum4:
-    scale: 0
-    windSpeed: 1
-    windDirection: 0
-    fetch: 1
-    spreadBlend: 0
-    swell: 0
+    scale: 0.5
+    windSpeed: 20
+    windDirection: 67
+    fetch: 1000000
+    spreadBlend: 0.22
+    swell: 0.69
     peakEnhancement: 1
-    shortWavesFade: 0.0001
+    shortWavesFade: 1
+  tile3: 32
+  visualizeTile3: 0
+  visualizeLayer3: 1
   spectrum5:
-    scale: 0
-    windSpeed: 1
-    windDirection: 0
-    fetch: 1
-    spreadBlend: 0
-    swell: 0
+    scale: 0.21
+    windSpeed: 5
+    windDirection: 105
+    fetch: 1000000
+    spreadBlend: 0.2
+    swell: 1
     peakEnhancement: 1
-    shortWavesFade: 0.0001
+    shortWavesFade: 0.5
   spectrum6:
-    scale: 0
+    scale: 0.1
     windSpeed: 1
-    windDirection: 0
-    fetch: 1
-    spreadBlend: 0
-    swell: 0
+    windDirection: 19
+    fetch: 10000
+    spreadBlend: 0.298
+    swell: 0.695
     peakEnhancement: 1
-    shortWavesFade: 0.0001
+    shortWavesFade: 0.5
+  tile4: 167
+  visualizeTile4: 0
+  visualizeLayer4: 1
   spectrum7:
-    scale: 0
+    scale: 0.1
     windSpeed: 1
-    windDirection: 0
-    fetch: 1
-    spreadBlend: 0
-    swell: 0
+    windDirection: 209
+    fetch: 200000
+    spreadBlend: 0.616
+    swell: 0.649
     peakEnhancement: 1
     shortWavesFade: 0.0001
   spectrum8:
-    scale: 0
+    scale: 0.23
     windSpeed: 1
     windDirection: 0
-    fetch: 1
+    fetch: 1000
     spreadBlend: 0
     swell: 0
     peakEnhancement: 1
     shortWavesFade: 0.0001
-  updateSpectrum: 0
-  speed: 1
-  lambda: {x: 1, y: 1}
-  normalStrength: 1
+  normalStrength: 10
+  normalDepthFalloff: 1.25
   ambient: {r: 0, g: 0, b: 0, a: 0}
   diffuseReflectance: {r: 1, g: 1, b: 1, a: 0}
   specularReflectance: {r: 1, g: 1, b: 1, a: 0}
@@ -420,10 +433,23 @@ MonoBehaviour:
   fresnelShininess: 5
   fresnelNormalStrength: 1
   tipColor: {r: 0, g: 0, b: 0, a: 0}
-  foamBias: -0.5
+  sunIrradiance: {r: 1, g: 0.694, b: 0.32, a: 0}
+  scatter: {r: 0.016000003, g: 0.07359998, b: 0.16, a: 0}
+  bubble: {r: 0, g: 0.02, b: 0.015999999, a: 0}
+  bubbleDensity: 1
+  roughness: 0.05
+  foamRoughnessModifier: 0.21
+  heightModifier: 1
+  wavePeakScatterStrength: 1
+  scatterStrength: 1
+  scatterShadowStrength: 0.5
+  environmentLightStrength: 0.84
+  foam: {r: 0.6, g: 0.5568, b: 0.492, a: 0}
+  foamBias: 1.03
   foamThreshold: 0
-  foamAdd: 0.5
-  foamDecayRate: 0.05
+  foamAdd: 0.12
+  foamDecayRate: 0.0175
+  foamDepthFalloff: 2
 --- !u!1 &320027525
 GameObject:
   m_ObjectHideFlags: 0
@@ -821,8 +847,10 @@ GameObject:
   - component: {fileID: 963194227}
   - component: {fileID: 963194226}
   - component: {fileID: 963194229}
-  - component: {fileID: 963194231}
   - component: {fileID: 963194230}
+  - component: {fileID: 963194231}
+  - component: {fileID: 963194233}
+  - component: {fileID: 963194234}
   - component: {fileID: 963194232}
   m_Layer: 0
   m_Name: Main Camera
@@ -889,14 +917,14 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalRotation: {x: 0.002988604, y: 0.9135208, z: -0.006712515, w: 0.40672565}
+  m_LocalPosition: {x: -811.7, y: 45.74, z: 744.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0.842, y: 132, z: 0}
 --- !u!114 &963194229
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -951,15 +979,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   atmosphereShader: {fileID: 4800000, guid: a9a6dcce863cdff4698e8d702def982d, type: 3}
   skyboxTex: {fileID: 8900000, guid: 6fa3f446deee84c52aec507bd0aca28c, type: 3}
-  skyboxDirection: {x: 0, y: -1, z: 0}
-  skyboxSpeed: 0
-  sunDirection: {x: 0, y: -1, z: -6}
-  sunColor: {r: 1, g: 1, b: 1, a: 0}
-  fogHeight: 500
-  fogAttenuation: 1.2
-  fogColor: {r: 0, g: 0, b: 0, a: 0}
-  fogDensity: 0
-  fogOffset: 0
+  skyboxDirection: {x: 4.35, y: 0.83, z: -5.18}
+  skyboxSpeed: 0.01
+  sunDirection: {x: -1.29, y: -1, z: 4.86}
+  sunColor: {r: 3.0117648, g: 1.945098, b: 0.8784314, a: 0}
+  fogHeight: 218
+  fogAttenuation: 1.63
+  fogColor: {r: 0.69, g: 0.58374, b: 0.4002, a: 0}
+  fogDensity: 0.0015
+  fogOffset: 583
 --- !u!114 &963194231
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -967,7 +995,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e446a7d91cb1e1f4e9d2c57b7128a36d, type: 3}
   m_Name: 
@@ -975,11 +1003,11 @@ MonoBehaviour:
   atmosphere: {fileID: 963194230}
   bloomShader: {fileID: 4800000, guid: afff8c329837aa7489937abc01272732, type: 3}
   threshold: 1
-  softThreshold: 0.5
-  downSamples: 1
+  softThreshold: 0.94
+  downSamples: 6
   downSampleDelta: 1
   upSampleDelta: 0.5
-  bloomIntensity: 1
+  bloomIntensity: 0.25
 --- !u!114 &963194232
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1002,6 +1030,58 @@ MonoBehaviour:
   showAlpha: 0
   absolute: 0
   exposure: 1
+--- !u!114 &963194233
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 963194225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7405cba9b40be746b737b0b8bf7dbbf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  atmosphere: {fileID: 0}
+  tonemapperShader: {fileID: 4800000, guid: 137875d7ae5006743ad9a9a26a7d7544, type: 3}
+  toneMapper: 10
+  Ldmax: 0
+  Cmax: 0
+  p: 0
+  hiVal: 0
+  Cwhite: 0
+  shoulderStrength: 0
+  linearStrength: 0
+  linearAngle: 0
+  toeStrength: 0
+  toeNumerator: 0
+  toeDenominator: 0
+  linearWhitePoint: 0
+  maxBrightness: 0
+  contrast: 0
+  linearStart: 0
+  linearLength: 0
+  blackTightnessShape: 0
+  blackTightnessOffset: 0
+--- !u!114 &963194234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 963194225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4752f3ce1141f248b7c6524e001f484, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  vignette: {fileID: 4800000, guid: edb01f7260327494ea6a4b4b4efd557b, type: 3}
+  vignetteColor: {r: 0.5226, g: 0.6941999, b: 0.78, a: 0}
+  vignetteOffset: {x: 0, y: 0}
+  vignetteSize: {x: 1, y: 1}
+  intensity: 0.86
+  roundness: 1.33
+  smoothness: 1
 --- !u!1 &972049850
 GameObject:
   m_ObjectHideFlags: 0

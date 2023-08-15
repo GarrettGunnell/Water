@@ -37,7 +37,7 @@ public class FFTWater : MonoBehaviour {
 
     [System.Serializable]
     public struct DisplaySpectrumSettings {
-        [Range(0, 1)]
+        [Range(0, 5)]
         public float scale;
         public float windSpeed;
         [Range(0.0f, 360.0f)]
@@ -54,9 +54,6 @@ public class FFTWater : MonoBehaviour {
     [Header("Spectrum Settings")]
     [Range(0, 2048)]
     public int lengthScale = 256;
-    
-    [Range(0.01f, 200.0f)]
-    public float tile = 8.0f;
 
     [Range(0, 100000)]
     public int seed = 0;
@@ -76,37 +73,61 @@ public class FFTWater : MonoBehaviour {
     [Range(0.0f, 200.0f)]
     public float repeatTime = 200.0f;
 
+    [Range(0.0f, 5.0f)]
+    public float speed = 1.0f;
+
+    public Vector2 lambda = new Vector2(1.0f, 1.0f);
+
+    [Range(0.0f, 10.0f)]
+    public float displacementDepthFalloff = 1.0f;
+
+    public bool updateSpectrum = false;
+
+    [Header("Layer One")]
+    [Range(0.01f, 200.0f)]
+    public float tile1 = 8.0f;
+    public bool visualizeTile1 = false;
+    public bool visualizeLayer1 = false;
     [SerializeField]
     public DisplaySpectrumSettings spectrum1;
     [SerializeField]
     public DisplaySpectrumSettings spectrum2;
+    [Header("Layer Two")]
+    [Range(0.01f, 200.0f)]
+    public float tile2 = 8.0f;
+    public bool visualizeTile2 = false;
+    public bool visualizeLayer2 = false;
     [SerializeField]
     public DisplaySpectrumSettings spectrum3;
     [SerializeField]
     public DisplaySpectrumSettings spectrum4;
+    [Header("Layer Three")]
+    [Range(0.01f, 200.0f)]
+    public float tile3 = 8.0f;
+    public bool visualizeTile3 = false;
+    public bool visualizeLayer3 = false;
     [SerializeField]
     public DisplaySpectrumSettings spectrum5;
     [SerializeField]
     public DisplaySpectrumSettings spectrum6;
+    [Header("Layer Four")]
+    [Range(0.01f, 200.0f)]
+    public float tile4 = 8.0f;
+    public bool visualizeTile4 = false;
+    public bool visualizeLayer4 = false;
     [SerializeField]
     public DisplaySpectrumSettings spectrum7;
     [SerializeField]
     public DisplaySpectrumSettings spectrum8;
 
-    public bool updateSpectrum = false;
-
-    [Range(0.0f, 5.0f)]
-    public float speed = 1.0f;
-
-    public Vector2 lambda = new Vector2(-1.0f, -1.0f);
-
-
-
-    [Header("Material Settings")]
+    [Header("Normal Settings")]
     [Range(0.0f, 20.0f)]
     public float normalStrength = 1;
+    
+    [Range(0.0f, 10.0f)]
+    public float normalDepthFalloff = 1.0f;
 
-    // Shader Settings
+    [Header("Material Settings")]
     [ColorUsageAttribute(false, true)]
     public Color ambient;
 
@@ -143,7 +164,44 @@ public class FFTWater : MonoBehaviour {
     [ColorUsageAttribute(false, true)]
     public Color tipColor;
 
+    [Header("PBR Settings")]
+    [ColorUsageAttribute(false, true)]
+    public Color sunIrradiance;
+
+    [ColorUsageAttribute(false, true)]
+    public Color scatter;
+
+    [ColorUsageAttribute(false, true)]
+    public Color bubble;
+
+    [Range(0.0f, 1.0f)]
+    public float bubbleDensity = 1.0f;
+
+    [Range(0.0f, 2.0f)]
+    public float roughness = 0.1f;
+
+    [Range(0.0f, 2.0f)]
+    public float foamRoughnessModifier = 1.0f;
+
+    [Range(0.0f, 10.0f)]
+    public float heightModifier = 1.0f;
+
+    [Range(0.0f, 10.0f)]
+    public float wavePeakScatterStrength = 1.0f;
+    
+    [Range(0.0f, 10.0f)]
+    public float scatterStrength = 1.0f;
+
+    [Range(0.0f, 10.0f)]
+    public float scatterShadowStrength = 1.0f;
+
+    [Range(0.0f, 2.0f)]
+    public float environmentLightStrength = 1.0f;
+
     [Header("Foam Settings")]
+    [ColorUsageAttribute(false, true)]
+    public Color foam;
+
     [Range(-2.0f, 2.0f)]
     public float foamBias = -0.5f;
 
@@ -155,6 +213,9 @@ public class FFTWater : MonoBehaviour {
 
     [Range(0.0f, 1.0f)]
     public float foamDecayRate = 0.05f;
+
+    [Range(0.0f, 10.0f)]
+    public float foamDepthFalloff = 1.0f;
 
     private RenderTexture displacementTextures, 
                           slopeTextures, 
@@ -359,7 +420,35 @@ public class FFTWater : MonoBehaviour {
         waterMaterial.SetFloat("_FresnelNormalStrength", fresnelNormalStrength);
         waterMaterial.SetFloat("_SpecularNormalStrength", specularNormalStrength);
         waterMaterial.SetInt("_UseEnvironmentMap", useTextureForFresnel ? 1 : 0);
-        waterMaterial.SetFloat("_Tile", tile);
+        waterMaterial.SetFloat("_Tile0", tile1);
+        waterMaterial.SetFloat("_Tile1", tile2);
+        waterMaterial.SetFloat("_Tile2", tile3);
+        waterMaterial.SetFloat("_Tile3", tile4);
+        waterMaterial.SetFloat("_Roughness", roughness);
+        waterMaterial.SetFloat("_FoamRoughnessModifier", foamRoughnessModifier);
+        waterMaterial.SetVector("_SunIrradiance", sunIrradiance);
+        waterMaterial.SetVector("_BubbleColor", bubble);
+        waterMaterial.SetVector("_ScatterColor", scatter);
+        waterMaterial.SetVector("_FoamColor", foam);
+        waterMaterial.SetFloat("_BubbleDensity", bubbleDensity);
+        waterMaterial.SetFloat("_HeightModifier", heightModifier);
+        waterMaterial.SetFloat("_DisplacementDepthAttenuation", displacementDepthFalloff);
+        waterMaterial.SetFloat("_NormalDepthAttenuation", normalDepthFalloff);
+        waterMaterial.SetFloat("_FoamDepthAttenuation", foamDepthFalloff);
+        waterMaterial.SetFloat("_WavePeakScatterStrength", wavePeakScatterStrength);
+        waterMaterial.SetFloat("_ScatterStrength", scatterStrength);
+        waterMaterial.SetFloat("_ScatterShadowStrength", scatterShadowStrength);
+        waterMaterial.SetFloat("_EnvironmentLightStrength", environmentLightStrength);
+
+        waterMaterial.SetInt("_DebugTile0", visualizeTile1 ? 1 : 0);
+        waterMaterial.SetInt("_DebugTile1", visualizeTile2 ? 1 : 0);
+        waterMaterial.SetInt("_DebugTile2", visualizeTile3 ? 1 : 0);
+        waterMaterial.SetInt("_DebugTile3", visualizeTile4 ? 1 : 0);
+
+        waterMaterial.SetInt("_DebugLayer0", visualizeLayer1 ? 1 : 0);
+        waterMaterial.SetInt("_DebugLayer1", visualizeLayer2 ? 1 : 0);
+        waterMaterial.SetInt("_DebugLayer2", visualizeLayer3 ? 1 : 0);
+        waterMaterial.SetInt("_DebugLayer3", visualizeLayer4 ? 1 : 0);
 
         SetFFTUniforms();
         if (updateSpectrum) {
@@ -388,17 +477,6 @@ public class FFTWater : MonoBehaviour {
         displacementTextures.GenerateMips();
         slopeTextures.GenerateMips();
 
-        
-
-
-        //fftComputeShader.SetTexture(8, "_SpectrumTextures", spectrumTextures);
-        //fftComputeShader.Dispatch(8, threadGroupsX, threadGroupsY, 1);
-
-        //Graphics.Blit(foamTex, pingPongTex);
-
-        //fftComputeShader.SetTexture(9, "_PingTex", pingPongTex);
-        //fftComputeShader.SetTexture(9, "_FoamTex", foamTex);
-        //fftComputeShader.Dispatch(9, threadGroupsX, threadGroupsY, 1);
 
         waterMaterial.SetTexture("_DisplacementTextures", displacementTextures);
         waterMaterial.SetTexture("_SlopeTextures", slopeTextures);

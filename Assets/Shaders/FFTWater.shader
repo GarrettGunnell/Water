@@ -33,45 +33,6 @@ Shader "Custom/FFTWater" {
                    TriangleIsBelowClipPlane(p0, p1, p2, 2, bias) ||
                    TriangleIsBelowClipPlane(p0, p1, p2, 3, bias);
         }
-
-		// https://gist.github.com/TheRealMJP/c83b8c0f46b63f3a88a5986f4fa982b1
-		float4 SampleTextureCatmullRom(in Texture2D<float4> tex, in SamplerState linearSampler, in float2 uv, in float2 texSize) {
-			float2 samplePos = uv * texSize;
-			float2 texPos1 = floor(samplePos - 0.5f) + 0.5f;
-
-			float2 f = samplePos - texPos1;
-
-			float2 w0 = f * (-0.5f + f * (1.0f - 0.5f * f));
-			float2 w1 = 1.0f + f * f * (-2.5f + 1.5f * f);
-			float2 w2 = f * (0.5f + f * (2.0f - 1.5f * f));
-			float2 w3 = f * f * (-0.5f + 0.5f * f);
-
-			float2 w12 = w1 + w2;
-			float2 offset12 = w2 / (w1 + w2);
-
-			float2 texPos0 = texPos1 - 1;
-			float2 texPos3 = texPos1 + 2;
-			float2 texPos12 = texPos1 + offset12;
-
-			texPos0 /= texSize;
-			texPos3 /= texSize;
-			texPos12 /= texSize;
-
-			float4 result = 0.0f;
-			result += tex.Sample(linearSampler, float2(texPos0.x, texPos0.y)) * w0.x * w0.y;
-			result += tex.Sample(linearSampler, float2(texPos12.x, texPos0.y)) * w12.x * w0.y;
-			result += tex.Sample(linearSampler, float2(texPos3.x, texPos0.y)) * w3.x * w0.y;
-
-			result += tex.Sample(linearSampler, float2(texPos0.x, texPos12.y)) * w0.x * w12.y;
-			result += tex.Sample(linearSampler, float2(texPos12.x, texPos12.y)) * w12.x * w12.y;
-			result += tex.Sample(linearSampler, float2(texPos3.x, texPos12.y)) * w3.x * w12.y;
-
-			result += tex.Sample(linearSampler, float2(texPos0.x, texPos3.y)) * w0.x * w3.y;
-			result += tex.Sample(linearSampler, float2(texPos12.x, texPos3.y)) * w12.x * w3.y;
-			result += tex.Sample(linearSampler, float2(texPos3.x, texPos3.y)) * w3.x * w3.y;
-
-			return result;
-		}
     ENDCG
 
 	SubShader {
@@ -131,6 +92,15 @@ Shader "Custom/FFTWater" {
 
 			float3 _Ambient, _DiffuseReflectance, _SpecularReflectance, _FresnelColor, _TipColor;
 			float _Shininess, _FresnelBias, _FresnelStrength, _FresnelShininess, _TipAttenuation;
+			float _Roughness, _FoamRoughnessModifier;
+			float _Tile0, _Tile1, _Tile2, _Tile3;
+			float3 _SunIrradiance, _ScatterColor, _BubbleColor, _FoamColor;
+			float _HeightModifier, _BubbleDensity;
+			float _DisplacementDepthAttenuation, _FoamDepthAttenuation, _NormalDepthAttenuation;
+			float _WavePeakScatterStrength, _ScatterStrength, _ScatterShadowStrength, _EnvironmentLightStrength;
+
+			int _DebugTile0, _DebugTile1, _DebugTile2, _DebugTile3;
+			int _DebugLayer0, _DebugLayer1, _DebugLayer2, _DebugLayer3;
 
 			float4x4 _CameraInvViewProjection;
 			sampler2D _CameraDepthTexture;
@@ -151,16 +121,16 @@ Shader "Custom/FFTWater" {
 			v2g vp(VertexData v) {
 				v2g g;
                 g.worldPos = mul(unity_ObjectToWorld, v.vertex);
-                float3 displacement1 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3(v.uv * _Tile * (1 / 8.0f), 0), 0);
-                float3 displacement2 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3(v.uv * _Tile * (1 / 4.0f), 1), 0);
-                float3 displacement3 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3(v.uv * _Tile * (1 / 2.0f), 2), 0);
-                float3 displacement4 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3(v.uv * _Tile, 3), 0);
+                float3 displacement1 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3(v.uv * _Tile0, 0), 0) * _DebugLayer0;
+                float3 displacement2 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3((v.uv - 0.5f) * _Tile1, 1), 0) * _DebugLayer1;
+                float3 displacement3 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3((v.uv - 1.125f) * _Tile2, 2), 0) * _DebugLayer2;
+                float3 displacement4 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3((v.uv - 1.25f) * _Tile3, 3), 0) * _DebugLayer3;
 				float3 displacement = displacement1 + displacement2 + displacement3 + displacement4;
 
 				float4 clipPos = UnityObjectToClipPos(v.vertex);
 				float depth = 1 - Linear01Depth(clipPos.z / clipPos.w);
 
-				displacement = lerp(0.0f, displacement, saturate(depth));
+				displacement = lerp(0.0f, displacement, pow(saturate(depth), _DisplacementDepthAttenuation));
 
 				v.vertex.xyz += mul(unity_WorldToObject, displacement.xyz);
                 g.pos = UnityObjectToClipPos(v.vertex);
@@ -180,7 +150,7 @@ Shader "Custom/FFTWater" {
                 float3 p2 = mul(unity_ObjectToWorld, patch[2].vertex);
 
                 TessellationFactors f;
-                float bias = -0.5 * 20;
+                float bias = -0.5 * 100;
                 if (cullTriangle(p0, p1, p2, bias)) {
                     f.edge[0] = f.edge[1] = f.edge[2] = f.inside = 0;
                 } else {
@@ -261,35 +231,35 @@ Shader "Custom/FFTWater" {
 				float VdotH = DotClamped(viewDir, halfwayDir);
 				
 				
-                float4 displacementFoam1 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3(f.data.uv * _Tile * (1 / 8.0f), 0));
-				displacementFoam1.a -= 1.2f;
-                float4 displacementFoam2 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3(f.data.uv * _Tile * (1 / 4.0f), 1));
-				displacementFoam2.a -= 1.0f;
-                float4 displacementFoam3 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3(f.data.uv * _Tile * (1 / 2.0f), 2));
-                float4 displacementFoam4 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3(f.data.uv * _Tile, 3));
+                float4 displacementFoam1 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3(f.data.uv * _Tile0, 0)) * _DebugLayer0;
+				displacementFoam1.a -= 0.95f;
+                float4 displacementFoam2 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3((f.data.uv - 0.5f) * _Tile1, 1)) * _DebugLayer1;
+				displacementFoam2.a -= 0.95f;
+                float4 displacementFoam3 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3((f.data.uv - 1.125f) * _Tile2, 2)) * _DebugLayer2;
+                float4 displacementFoam4 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3((f.data.uv - 1.25f) * _Tile3, 3)) * _DebugLayer3;
                 float4 displacementFoam = displacementFoam1 + displacementFoam2 + displacementFoam3 + displacementFoam4;
 
 				
-				float2 slopes1 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3(f.data.uv * _Tile * (1 / 8.0f), 0));
-				float2 slopes2 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3(f.data.uv * _Tile * (1 / 4.0f), 1));
-				float2 slopes3 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3(f.data.uv * _Tile * (1 / 2.0f), 2));
-				float2 slopes4 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3(f.data.uv * _Tile, 3));
+				float2 slopes1 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3(f.data.uv * _Tile0, 0)) * _DebugLayer0;
+				float2 slopes2 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3((f.data.uv - 0.5) * _Tile1, 1)) * _DebugLayer1;
+				float2 slopes3 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3((f.data.uv - 1.125) * _Tile2, 2)) * _DebugLayer2;
+				float2 slopes4 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3((f.data.uv - 1.25) * _Tile3, 3)) * _DebugLayer3;
 				float2 slopes = slopes1 + slopes2 + slopes3 + slopes4;
 
 				
 				slopes *= _NormalStrength;
-				float foam = lerp(0.0f, saturate(displacementFoam.a), pow(depth, 4.0f));
+				float foam = lerp(0.0f, saturate(displacementFoam.a), pow(depth, _FoamDepthAttenuation));
 
 				#ifdef NEW_LIGHTING
 				float3 macroNormal = float3(0, 1, 0);
 				float3 mesoNormal = normalize(float3(-slopes.x, 1.0f, -slopes.y));
-				mesoNormal = normalize(lerp(float3(0, 1, 0), mesoNormal, pow(saturate(depth), 1.5f)));
+				mesoNormal = normalize(lerp(float3(0, 1, 0), mesoNormal, pow(saturate(depth), _NormalDepthAttenuation)));
 				mesoNormal = normalize(UnityObjectToWorldNormal(normalize(mesoNormal)));
 
 				float NdotL = DotClamped(mesoNormal, lightDir);
 
 				
-				float a = 0.1f + foam * 0.5f;
+				float a = _Roughness + foam * _FoamRoughnessModifier;
 				float ndoth = max(0.0001f, dot(mesoNormal, halfwayDir));
 
 				float viewMask = SmithMaskingBeckmann(halfwayDir, viewDir, a);
@@ -304,38 +274,37 @@ Shader "Custom/FFTWater" {
 				float numerator = pow(1 - dot(mesoNormal, viewDir), 5 * exp(-2.69 * a));
 				float F = R + (1 - R) * numerator / (1.0f + 22.7f * pow(a, 1.5f));
 				F = saturate(F);
-				//F *= SchlickFresnel(mesoNormal, viewDir);
 				
-				float3 specular = _SpecularReflectance * F * G * Beckmann(ndoth, a);
+				float3 specular = _SunIrradiance * F * G * Beckmann(ndoth, a);
 				specular /= 4.0f * max(0.001f, DotClamped(macroNormal, lightDir));
 				specular *= DotClamped(mesoNormal, lightDir);
 
 				float3 envReflection = texCUBE(_EnvironmentMap, reflect(-viewDir, mesoNormal)).rgb;
+				envReflection *= _EnvironmentLightStrength;
 
-				float H = max(0.0f, displacementFoam.y);
-				float3 scatterColor = _Ambient;
-				float3 bubbleColor = _FresnelColor;
-				float bubbleDensity = 0.5f;
+				float H = max(0.0f, displacementFoam.y) * _HeightModifier;
+				float3 scatterColor = _ScatterColor;
+				float3 bubbleColor = _BubbleColor;
+				float bubbleDensity = _BubbleDensity;
 
 				
-				float k1 = 1.0f * H * pow(DotClamped(lightDir, -viewDir), 4.0f) * pow(0.5f - 0.5f * dot(lightDir, mesoNormal), 3.0f);
-				float k2 = 1.0f * pow(DotClamped(viewDir, mesoNormal), 2.0f);
-				float k3 = 1.0f * NdotL;
-				float k4 = 1.0f * bubbleDensity;
+				float k1 = _WavePeakScatterStrength * H * pow(DotClamped(lightDir, -viewDir), 4.0f) * pow(0.5f - 0.5f * dot(lightDir, mesoNormal), 3.0f);
+				float k2 = _ScatterStrength * pow(DotClamped(viewDir, mesoNormal), 2.0f);
+				float k3 = _ScatterShadowStrength * NdotL;
+				float k4 = bubbleDensity;
 
-				float3 scatter = (k1 + k2) * scatterColor * _SpecularReflectance * rcp(1 + lightMask);
-				scatter += k3 * scatterColor * _SpecularReflectance + k4 * bubbleColor * _SpecularReflectance;
+				float3 scatter = (k1 + k2) * scatterColor * _SunIrradiance * rcp(1 + lightMask);
+				scatter += k3 * scatterColor * _SunIrradiance + k4 * bubbleColor * _SunIrradiance;
 
 				
 				float3 output = (1 - F) * scatter + specular + F * envReflection;
-				output = lerp(output, _TipColor, saturate(foam));
+				output = max(0.0f, output);
+				output = lerp(output, _FoamColor, saturate(foam));
 
 				#else
 				slopes *= _NormalStrength;
 				float3 normal = normalize(float3(-slopes.x, 1.0f, -slopes.y));
                 normal = normalize(UnityObjectToWorldNormal(normalize(normal)));
-
-				// normal = centralDifferenceNormal(f.data.worldPos, 0.01f);
 
 				float ndotl = DotClamped(lightDir, normal);
 
@@ -381,6 +350,23 @@ Shader "Custom/FFTWater" {
 				float3 output = _Ambient + diffuse + specular + fresnel;
 				output = lerp(output, _TipColor, saturate(foam));
 				#endif
+
+
+				if (_DebugTile0) {
+					output = cos(f.data.uv.x * _Tile0 * PI) * cos(f.data.uv.y * _Tile0 * PI);
+				}
+
+				if (_DebugTile1) {
+					output = cos(f.data.uv.x * _Tile1) * 1024 * cos(f.data.uv.y * _Tile1) * 1024;
+				}
+
+				if (_DebugTile2) {
+					output = cos(f.data.uv.x * _Tile2) * 1024 * cos(f.data.uv.y * _Tile2) * 1024;
+				}
+
+				if (_DebugTile3) {
+					output = cos(f.data.uv.x * _Tile3) * 1024 * cos(f.data.uv.y * _Tile3) * 1024;
+				}
 				
 				return float4(output, 1.0f);
 			}
