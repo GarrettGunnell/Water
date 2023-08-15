@@ -8,14 +8,9 @@
 
 #define PI 3.14159265358979323846
 
-RWTexture2D<float4> _InitialSpectrumTex;
-RWTexture2D<float4> _DisplacementTex;
-RWTexture2D<float2> _NormalTex;
-RWTexture2D<float> _FoamTex;
 Texture2D<float2> _PingTex;
-
-RWTexture2D<float4> _HTildeSlopeTex, _HTildeDisplacementTex;
-RWTexture2DArray<float4> _SpectrumTextures, _InitialSpectrumTextures;
+RWTexture2DArray<float4> _SpectrumTextures, _InitialSpectrumTextures, _DisplacementTextures;
+RWTexture2DArray<float2> _SlopeTextures;
 
 float _FrameTime, _DeltaTime, _A, _Gravity, _RepeatTime, _Damping, _Depth, _LowCutoff, _HighCutoff;
 int _Seed;
@@ -157,7 +152,7 @@ void CS_InitializeSpectrum(uint3 id : SV_DISPATCHTHREADID) {
 
             float dOmegadk = DispersionDerivative(kLength);
 
-            float spectrum = JONSWAP(omega, _Spectrums[i * 2]) * DirectionSpectrum(kAngle, omega, _Spectrums[i]) * ShortWavesFade(kLength, _Spectrums[i * 2]);
+            float spectrum = JONSWAP(omega, _Spectrums[i * 2]) * DirectionSpectrum(kAngle, omega, _Spectrums[i * 2]) * ShortWavesFade(kLength, _Spectrums[i * 2]);
             
             if (_Spectrums[i * 2 + 1].scale > 0)
                 spectrum += JONSWAP(omega, _Spectrums[i * 2 + 1]) * DirectionSpectrum(kAngle, omega, _Spectrums[i * 2 + 1]) * ShortWavesFade(kLength, _Spectrums[i * 2 + 1]);
@@ -302,33 +297,35 @@ float4 Permute(float4 data, float2 id) {
 
 [numthreads(8, 8, 1)]
 void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
-    float4 htildeDisplacement = Permute(_SpectrumTextures[uint3(id.xy, 0)], id);
-    float4 htildeSlope = Permute(_SpectrumTextures[uint3(id.xy, 1)], id);
+    for (int i = 0; i < 4; ++i) {
+        float4 htildeDisplacement = Permute(_SpectrumTextures[uint3(id.xy, i * 2)], id);
+        float4 htildeSlope = Permute(_SpectrumTextures[uint3(id.xy, i * 2 + 1)], id);
 
-    float2 dxdz = htildeDisplacement.rg;
-    float2 dydxz = htildeDisplacement.ba;
-    float2 dyxdyz = htildeSlope.rg;
-    float2 dxxdzz = htildeSlope.ba;
-    
-    float jacobian = (1.0f + _Lambda.x * dxxdzz.x) * (1.0f + _Lambda.y * dxxdzz.y) - _Lambda.x * _Lambda.y * dydxz.y * dydxz.y;
+        float2 dxdz = htildeDisplacement.rg;
+        float2 dydxz = htildeDisplacement.ba;
+        float2 dyxdyz = htildeSlope.rg;
+        float2 dxxdzz = htildeSlope.ba;
+        
+        float jacobian = (1.0f + _Lambda.x * dxxdzz.x) * (1.0f + _Lambda.y * dxxdzz.y) - _Lambda.x * _Lambda.y * dydxz.y * dydxz.y;
 
-    float3 displacement = float3(_Lambda.x * dxdz.x, dydxz.x, _Lambda.y * dxdz.y);
+        float3 displacement = float3(_Lambda.x * dxdz.x, dydxz.x, _Lambda.y * dxdz.y);
 
-    float2 slopes = dyxdyz.xy / (1 + abs(dxxdzz * _Lambda));
-    float covariance = slopes.x * slopes.y;
+        float2 slopes = dyxdyz.xy / (1 + abs(dxxdzz * _Lambda));
+        float covariance = slopes.x * slopes.y;
 
-    float foam = _DisplacementTex[id.xy].a;
-    foam *= exp(-_FoamDecayRate);
-    foam = saturate(foam);
+        float foam = _DisplacementTextures[uint3(id.xy, i)].a;
+        foam *= exp(-_FoamDecayRate);
+        foam = saturate(foam);
 
-    float biasedJacobian = max(0.0f, -(jacobian - _FoamBias));
+        float biasedJacobian = max(0.0f, -(jacobian - _FoamBias));
 
-    if (biasedJacobian > _FoamThreshold)
-        foam += _FoamAdd * biasedJacobian;
+        if (biasedJacobian > _FoamThreshold)
+            foam += _FoamAdd * biasedJacobian;
 
 
-    _DisplacementTex[id.xy] = float4(displacement, foam);
-    _NormalTex[id.xy] = float2(slopes);
+        _DisplacementTextures[uint3(id.xy, i)] = float4(displacement, foam);
+        _SlopeTextures[uint3(id.xy, i)] = float2(slopes);
+    }
 }
 
 
