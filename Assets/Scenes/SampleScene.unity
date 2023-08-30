@@ -323,64 +323,69 @@ MonoBehaviour:
   atmosphere: {fileID: 963194230}
   planeLength: 200
   quadRes: 2
-  lengthScale: 200
-  seed: 26466
+  seed: 1
   lowCutoff: 0.0001
   highCutoff: 9000
-  gravity: 12.1
+  gravity: 9.81
   depth: 20
   repeatTime: 200
   speed: 1
   lambda: {x: 1, y: 1}
-  displacementDepthFalloff: 1.5
+  displacementDepthFalloff: 1
   updateSpectrum: 0
+  lengthScale1: 512
   tile1: 4
   visualizeTile1: 0
   visualizeLayer1: 1
+  contributeDisplacement1: 1
   spectrum1:
-    scale: 2.71
+    scale: 0.5
     windSpeed: 20
     windDirection: 22
     fetch: 100000000
     spreadBlend: 1
-    swell: 1
+    swell: 0.42
     peakEnhancement: 1
-    shortWavesFade: 4.34
+    shortWavesFade: 1
   spectrum2:
-    scale: 1.25
+    scale: 0.5
     windSpeed: 24.9
     windDirection: 59
     fetch: 1000000
-    spreadBlend: 0.31
+    spreadBlend: 1
     swell: 1
     peakEnhancement: 1
-    shortWavesFade: 4.58
-  tile2: 12
+    shortWavesFade: 1
+  lengthScale2: 128
+  tile2: 8
   visualizeTile2: 0
   visualizeLayer2: 1
+  contributeDisplacement2: 1
   spectrum3:
-    scale: 0.5
+    scale: 0.25
     windSpeed: 20
     windDirection: 97
     fetch: 100000000
     spreadBlend: 0.14
-    swell: 0.841
+    swell: 1
     peakEnhancement: 1
-    shortWavesFade: 1
+    shortWavesFade: 0.5
   spectrum4:
-    scale: 0.5
+    scale: 0.25
     windSpeed: 20
     windDirection: 67
     fetch: 1000000
-    spreadBlend: 0.22
-    swell: 0.69
+    spreadBlend: 0.47
+    swell: 1
     peakEnhancement: 1
-    shortWavesFade: 1
-  tile3: 32
+    shortWavesFade: 0.5
+  lengthScale3: 64
+  tile3: 64
   visualizeTile3: 0
   visualizeLayer3: 1
+  contributeDisplacement3: 1
   spectrum5:
-    scale: 0.21
+    scale: 0.15
     windSpeed: 5
     windDirection: 105
     fetch: 1000000
@@ -397,16 +402,18 @@ MonoBehaviour:
     swell: 0.695
     peakEnhancement: 1
     shortWavesFade: 0.5
-  tile4: 167
+  lengthScale4: 32
+  tile4: 128
   visualizeTile4: 0
   visualizeLayer4: 1
+  contributeDisplacement4: 0
   spectrum7:
-    scale: 0.1
+    scale: 1
     windSpeed: 1
     windDirection: 209
     fetch: 200000
-    spreadBlend: 0.616
-    swell: 0.649
+    spreadBlend: 0.56
+    swell: 1
     peakEnhancement: 1
     shortWavesFade: 0.0001
   spectrum8:
@@ -419,7 +426,7 @@ MonoBehaviour:
     peakEnhancement: 1
     shortWavesFade: 0.0001
   normalStrength: 10
-  normalDepthFalloff: 1.25
+  normalDepthFalloff: 1
   ambient: {r: 0, g: 0, b: 0, a: 0}
   diffuseReflectance: {r: 1, g: 1, b: 1, a: 0}
   specularReflectance: {r: 1, g: 1, b: 1, a: 0}
@@ -437,19 +444,23 @@ MonoBehaviour:
   scatter: {r: 0.016000003, g: 0.07359998, b: 0.16, a: 0}
   bubble: {r: 0, g: 0.02, b: 0.015999999, a: 0}
   bubbleDensity: 1
-  roughness: 0.05
-  foamRoughnessModifier: 0.21
+  roughness: 0.075
+  foamRoughnessModifier: 0
   heightModifier: 1
   wavePeakScatterStrength: 1
   scatterStrength: 1
   scatterShadowStrength: 0.5
-  environmentLightStrength: 0.84
+  environmentLightStrength: 0.5
   foam: {r: 0.6, g: 0.5568, b: 0.492, a: 0}
-  foamBias: 1.03
+  foamBias: 0.85
   foamThreshold: 0
-  foamAdd: 0.12
+  foamAdd: 0.1
   foamDecayRate: 0.0175
-  foamDepthFalloff: 2
+  foamDepthFalloff: 1
+  foamSubtract1: 0.04
+  foamSubtract2: -0.04
+  foamSubtract3: -0.46
+  foamSubtract4: -0.38
 --- !u!1 &320027525
 GameObject:
   m_ObjectHideFlags: 0
@@ -918,7 +929,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   m_LocalRotation: {x: 0.002988604, y: 0.9135208, z: -0.006712515, w: 0.40672565}
-  m_LocalPosition: {x: -811.7, y: 45.74, z: 744.9}
+  m_LocalPosition: {x: -811.7, y: 18, z: 744.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

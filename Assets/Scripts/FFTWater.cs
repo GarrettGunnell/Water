@@ -52,9 +52,6 @@ public class FFTWater : MonoBehaviour {
     }
 
     [Header("Spectrum Settings")]
-    [Range(0, 2048)]
-    public int lengthScale = 256;
-
     [Range(0, 100000)]
     public int seed = 0;
 
@@ -84,37 +81,52 @@ public class FFTWater : MonoBehaviour {
     public bool updateSpectrum = false;
 
     [Header("Layer One")]
+    [Range(0, 2048)]
+    public int lengthScale1 = 256;
     [Range(0.01f, 200.0f)]
     public float tile1 = 8.0f;
     public bool visualizeTile1 = false;
     public bool visualizeLayer1 = false;
+    public bool contributeDisplacement1 = true;
     [SerializeField]
     public DisplaySpectrumSettings spectrum1;
     [SerializeField]
     public DisplaySpectrumSettings spectrum2;
+
     [Header("Layer Two")]
+    [Range(0, 2048)]
+    public int lengthScale2 = 256;
     [Range(0.01f, 200.0f)]
     public float tile2 = 8.0f;
     public bool visualizeTile2 = false;
     public bool visualizeLayer2 = false;
+    public bool contributeDisplacement2 = true;
     [SerializeField]
     public DisplaySpectrumSettings spectrum3;
     [SerializeField]
     public DisplaySpectrumSettings spectrum4;
+
     [Header("Layer Three")]
+    [Range(0, 2048)]
+    public int lengthScale3 = 256;
     [Range(0.01f, 200.0f)]
     public float tile3 = 8.0f;
     public bool visualizeTile3 = false;
     public bool visualizeLayer3 = false;
+    public bool contributeDisplacement3 = true;
     [SerializeField]
     public DisplaySpectrumSettings spectrum5;
     [SerializeField]
     public DisplaySpectrumSettings spectrum6;
+
     [Header("Layer Four")]
+    [Range(0, 2048)]
+    public int lengthScale4 = 256;
     [Range(0.01f, 200.0f)]
     public float tile4 = 8.0f;
     public bool visualizeTile4 = false;
     public bool visualizeLayer4 = false;
+    public bool contributeDisplacement4 = true;
     [SerializeField]
     public DisplaySpectrumSettings spectrum7;
     [SerializeField]
@@ -217,6 +229,15 @@ public class FFTWater : MonoBehaviour {
     [Range(0.0f, 10.0f)]
     public float foamDepthFalloff = 1.0f;
 
+    [Range(-2.0f, 2.0f)]
+    public float foamSubtract1 = 0.0f;
+    [Range(-2.0f, 2.0f)]
+    public float foamSubtract2 = 0.0f;
+    [Range(-2.0f, 2.0f)]
+    public float foamSubtract3 = 0.0f;
+    [Range(-2.0f, 2.0f)]
+    public float foamSubtract4 = 0.0f;
+
     private RenderTexture displacementTextures, 
                           slopeTextures, 
                           initialSpectrumTextures, 
@@ -305,7 +326,10 @@ public class FFTWater : MonoBehaviour {
         fftComputeShader.SetFloat("_RepeatTime", repeatTime);
         fftComputeShader.SetInt("_N", N);
         fftComputeShader.SetInt("_Seed", seed);
-        fftComputeShader.SetInt("_LengthScale", lengthScale);
+        fftComputeShader.SetInt("_LengthScale0", lengthScale1);
+        fftComputeShader.SetInt("_LengthScale1", lengthScale2);
+        fftComputeShader.SetInt("_LengthScale2", lengthScale3);
+        fftComputeShader.SetInt("_LengthScale3", lengthScale4);
         fftComputeShader.SetFloat("_NormalStrength", normalStrength);
         fftComputeShader.SetFloat("_FoamThreshold", foamThreshold);
         fftComputeShader.SetFloat("_Depth", depth);
@@ -449,6 +473,16 @@ public class FFTWater : MonoBehaviour {
         waterMaterial.SetInt("_DebugLayer1", visualizeLayer2 ? 1 : 0);
         waterMaterial.SetInt("_DebugLayer2", visualizeLayer3 ? 1 : 0);
         waterMaterial.SetInt("_DebugLayer3", visualizeLayer4 ? 1 : 0);
+
+        waterMaterial.SetInt("_ContributeDisplacement0", contributeDisplacement1 ? 1 : 0);
+        waterMaterial.SetInt("_ContributeDisplacement1", contributeDisplacement2 ? 1 : 0);
+        waterMaterial.SetInt("_ContributeDisplacement2", contributeDisplacement3 ? 1 : 0);
+        waterMaterial.SetInt("_ContributeDisplacement3", contributeDisplacement4 ? 1 : 0);
+
+        waterMaterial.SetFloat("_FoamSubtract0", foamSubtract1);
+        waterMaterial.SetFloat("_FoamSubtract1", foamSubtract2);
+        waterMaterial.SetFloat("_FoamSubtract2", foamSubtract3);
+        waterMaterial.SetFloat("_FoamSubtract3", foamSubtract4);
 
         SetFFTUniforms();
         if (updateSpectrum) {

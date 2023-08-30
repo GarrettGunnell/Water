@@ -100,7 +100,9 @@ Shader "Custom/FFTWater" {
 			float _WavePeakScatterStrength, _ScatterStrength, _ScatterShadowStrength, _EnvironmentLightStrength;
 
 			int _DebugTile0, _DebugTile1, _DebugTile2, _DebugTile3;
+			int _ContributeDisplacement0, _ContributeDisplacement1, _ContributeDisplacement2, _ContributeDisplacement3;
 			int _DebugLayer0, _DebugLayer1, _DebugLayer2, _DebugLayer3;
+			float _FoamSubtract0, _FoamSubtract1, _FoamSubtract2, _FoamSubtract3;
 
 			float4x4 _CameraInvViewProjection;
 			sampler2D _CameraDepthTexture;
@@ -121,10 +123,10 @@ Shader "Custom/FFTWater" {
 			v2g vp(VertexData v) {
 				v2g g;
                 g.worldPos = mul(unity_ObjectToWorld, v.vertex);
-                float3 displacement1 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3(v.uv * _Tile0, 0), 0) * _DebugLayer0;
-                float3 displacement2 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3((v.uv - 0.5f) * _Tile1, 1), 0) * _DebugLayer1;
-                float3 displacement3 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3((v.uv - 1.125f) * _Tile2, 2), 0) * _DebugLayer2;
-                float3 displacement4 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3((v.uv - 1.25f) * _Tile3, 3), 0) * _DebugLayer3;
+                float3 displacement1 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3(v.uv * _Tile0, 0), 0) * _DebugLayer0 * _ContributeDisplacement0;
+                float3 displacement2 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3((v.uv - 0.5f) * _Tile1, 1), 0) * _DebugLayer1 * _ContributeDisplacement1;
+                float3 displacement3 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3((v.uv - 1.125f) * _Tile2, 2), 0) * _DebugLayer2 * _ContributeDisplacement2;
+                float3 displacement4 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3((v.uv - 1.25f) * _Tile3, 3), 0) * _DebugLayer3 * _ContributeDisplacement3;
 				float3 displacement = displacement1 + displacement2 + displacement3 + displacement4;
 
 				float4 clipPos = UnityObjectToClipPos(v.vertex);
@@ -232,11 +234,13 @@ Shader "Custom/FFTWater" {
 				
 				
                 float4 displacementFoam1 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3(f.data.uv * _Tile0, 0)) * _DebugLayer0;
-				displacementFoam1.a -= 0.95f;
+				displacementFoam1.a += _FoamSubtract0;
                 float4 displacementFoam2 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3((f.data.uv - 0.5f) * _Tile1, 1)) * _DebugLayer1;
-				displacementFoam2.a -= 0.95f;
+				displacementFoam2.a += _FoamSubtract1;
                 float4 displacementFoam3 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3((f.data.uv - 1.125f) * _Tile2, 2)) * _DebugLayer2;
+				displacementFoam3.a += _FoamSubtract2;
                 float4 displacementFoam4 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3((f.data.uv - 1.25f) * _Tile3, 3)) * _DebugLayer3;
+				displacementFoam4.a += _FoamSubtract3;
                 float4 displacementFoam = displacementFoam1 + displacementFoam2 + displacementFoam3 + displacementFoam4;
 
 				

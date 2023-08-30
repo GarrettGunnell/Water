@@ -15,7 +15,7 @@ RWTexture2DArray<float2> _SlopeTextures;
 float _FrameTime, _DeltaTime, _A, _Gravity, _RepeatTime, _Damping, _Depth, _LowCutoff, _HighCutoff;
 int _Seed;
 float2 _Wind, _Lambda, _NormalStrength;
-uint _N, _LengthScale;
+uint _N, _LengthScale0, _LengthScale1, _LengthScale2, _LengthScale3;
 float _FoamBias, _FoamDecayRate, _FoamAdd, _FoamThreshold;
 
 float2 ComplexMult(float2 a, float2 b) {
@@ -134,13 +134,15 @@ void CS_InitializeSpectrum(uint3 id : SV_DISPATCHTHREADID) {
     uint seed = id.x + _N * id.y + _N;
     seed += _Seed;
 
-    float halfN = _N / 2.0f;
-
-    float deltaK = 2.0f * PI / _LengthScale;
-    float2 K = (id.xy - halfN) * deltaK;
-    float kLength = length(K);
+    float lengthScales[4] = { _LengthScale0, _LengthScale1, _LengthScale2, _LengthScale3 };
 
     for (uint i = 0; i < 4; ++i) {
+            float halfN = _N / 2.0f;
+
+        float deltaK = 2.0f * PI / lengthScales[i];
+        float2 K = (id.xy - halfN) * deltaK;
+        float kLength = length(K);
+
         seed += i + hash(seed) * 10;
         float4 uniformRandSamples = float4(hash(seed), hash(seed * 2), hash(seed * 3), hash(seed * 4));
         float2 gauss1 = UniformToGaussian(uniformRandSamples.x, uniformRandSamples.y);
@@ -176,13 +178,16 @@ void CS_PackSpectrumConjugate(uint3 id : SV_DISPATCHTHREADID) {
 
 [numthreads(8, 8, 1)]
 void CS_UpdateSpectrumForFFT(uint3 id : SV_DISPATCHTHREADID) {
+    
+    float lengthScales[4] = { _LengthScale0, _LengthScale1, _LengthScale2, _LengthScale3 };
+
     for (int i = 0; i < 4; ++i) {
         float4 initialSignal = _InitialSpectrumTextures[uint3(id.xy, i)];
         float2 h0 = initialSignal.xy;
         float2 h0conj = initialSignal.zw;
 
         float halfN = _N / 2.0f;
-        float2 K = (id.xy - halfN) * 2.0f * PI / _LengthScale;
+        float2 K = (id.xy - halfN) * 2.0f * PI / lengthScales[i];
         float kMag = length(K);
         float kMagRcp = rcp(kMag);
 
