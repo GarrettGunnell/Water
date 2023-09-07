@@ -548,6 +548,7 @@ public class FFTWater : MonoBehaviour {
         Destroy(spectrumTextures);
         Destroy(pingPongTex);
         Destroy(pingPongTex2);
+        spectrumBuffer.Dispose();
     }
 
     private void OnDrawGizmos() {
