@@ -122,11 +122,13 @@ Shader "Custom/FFTWater" {
 
 			v2g vp(VertexData v) {
 				v2g g;
+				v.uv = 0;
                 g.worldPos = mul(unity_ObjectToWorld, v.vertex);
-                float3 displacement1 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3(v.uv * _Tile0, 0), 0) * _DebugLayer0 * _ContributeDisplacement0;
-                float3 displacement2 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3((v.uv - 0.5f) * _Tile1, 1), 0) * _DebugLayer1 * _ContributeDisplacement1;
-                float3 displacement3 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3((v.uv - 1.125f) * _Tile2, 2), 0) * _DebugLayer2 * _ContributeDisplacement2;
-                float3 displacement4 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3((v.uv - 1.25f) * _Tile3, 3), 0) * _DebugLayer3 * _ContributeDisplacement3;
+
+                float3 displacement1 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3(g.worldPos.xz * _Tile0, 0), 0) * _DebugLayer0 * _ContributeDisplacement0;
+                float3 displacement2 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3(g.worldPos.xz * _Tile1, 1), 0) * _DebugLayer1 * _ContributeDisplacement1;
+                float3 displacement3 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3(g.worldPos.xz * _Tile2, 2), 0) * _DebugLayer2 * _ContributeDisplacement2;
+                float3 displacement4 = UNITY_SAMPLE_TEX2DARRAY_LOD(_DisplacementTextures, float3(g.worldPos.xz * _Tile3, 3), 0) * _DebugLayer3 * _ContributeDisplacement3;
 				float3 displacement = displacement1 + displacement2 + displacement3 + displacement4;
 
 				float4 clipPos = UnityObjectToClipPos(v.vertex);
@@ -135,8 +137,10 @@ Shader "Custom/FFTWater" {
 				displacement = lerp(0.0f, displacement, pow(saturate(depth), _DisplacementDepthAttenuation));
 
 				v.vertex.xyz += mul(unity_WorldToObject, displacement.xyz);
+				
                 g.pos = UnityObjectToClipPos(v.vertex);
-                g.uv = v.uv;
+                g.uv = g.worldPos.xz;
+                g.worldPos = mul(unity_ObjectToWorld, v.vertex);
 				g.depth = depth;
 				return g;
 			}
@@ -235,19 +239,19 @@ Shader "Custom/FFTWater" {
 				
                 float4 displacementFoam1 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3(f.data.uv * _Tile0, 0)) * _DebugLayer0;
 				displacementFoam1.a += _FoamSubtract0;
-                float4 displacementFoam2 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3((f.data.uv - 0.5f) * _Tile1, 1)) * _DebugLayer1;
+                float4 displacementFoam2 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3(f.data.uv * _Tile1, 1)) * _DebugLayer1;
 				displacementFoam2.a += _FoamSubtract1;
-                float4 displacementFoam3 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3((f.data.uv - 1.125f) * _Tile2, 2)) * _DebugLayer2;
+                float4 displacementFoam3 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3(f.data.uv * _Tile2, 2)) * _DebugLayer2;
 				displacementFoam3.a += _FoamSubtract2;
-                float4 displacementFoam4 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3((f.data.uv - 1.25f) * _Tile3, 3)) * _DebugLayer3;
+                float4 displacementFoam4 = UNITY_SAMPLE_TEX2DARRAY(_DisplacementTextures, float3(f.data.uv * _Tile3, 3)) * _DebugLayer3;
 				displacementFoam4.a += _FoamSubtract3;
                 float4 displacementFoam = displacementFoam1 + displacementFoam2 + displacementFoam3 + displacementFoam4;
 
 				
 				float2 slopes1 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3(f.data.uv * _Tile0, 0)) * _DebugLayer0;
-				float2 slopes2 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3((f.data.uv - 0.5) * _Tile1, 1)) * _DebugLayer1;
-				float2 slopes3 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3((f.data.uv - 1.125) * _Tile2, 2)) * _DebugLayer2;
-				float2 slopes4 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3((f.data.uv - 1.25) * _Tile3, 3)) * _DebugLayer3;
+				float2 slopes2 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3(f.data.uv * _Tile1, 1)) * _DebugLayer1;
+				float2 slopes3 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3(f.data.uv * _Tile2, 2)) * _DebugLayer2;
+				float2 slopes4 = UNITY_SAMPLE_TEX2DARRAY(_SlopeTextures, float3(f.data.uv * _Tile3, 3)) * _DebugLayer3;
 				float2 slopes = slopes1 + slopes2 + slopes3 + slopes4;
 
 				

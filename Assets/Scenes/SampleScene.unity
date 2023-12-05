@@ -333,34 +333,34 @@ MonoBehaviour:
   lambda: {x: 1, y: 1}
   displacementDepthFalloff: 1
   updateSpectrum: 0
-  lengthScale1: 512
-  tile1: 4
+  lengthScale1: 94
+  tile1: 14
   visualizeTile1: 0
   visualizeLayer1: 1
   contributeDisplacement1: 1
   spectrum1:
-    scale: 0.5
-    windSpeed: 20
+    scale: 0.96
+    windSpeed: 5
     windDirection: 22
-    fetch: 100000000
-    spreadBlend: 1
-    swell: 0.42
-    peakEnhancement: 1
-    shortWavesFade: 1
-  spectrum2:
-    scale: 0.5
-    windSpeed: 24.9
-    windDirection: 59
-    fetch: 1000000
-    spreadBlend: 1
+    fetch: 100000
+    spreadBlend: 0.642
     swell: 1
     peakEnhancement: 1
-    shortWavesFade: 1
+    shortWavesFade: 0.025
+  spectrum2:
+    scale: 0.07
+    windSpeed: 50
+    windDirection: 59
+    fetch: 1000
+    spreadBlend: 0
+    swell: 1
+    peakEnhancement: 1
+    shortWavesFade: 0.01
   lengthScale2: 128
   tile2: 8
   visualizeTile2: 0
-  visualizeLayer2: 1
-  contributeDisplacement2: 1
+  visualizeLayer2: 0
+  contributeDisplacement2: 0
   spectrum3:
     scale: 0.25
     windSpeed: 20
@@ -382,8 +382,8 @@ MonoBehaviour:
   lengthScale3: 64
   tile3: 64
   visualizeTile3: 0
-  visualizeLayer3: 1
-  contributeDisplacement3: 1
+  visualizeLayer3: 0
+  contributeDisplacement3: 0
   spectrum5:
     scale: 0.15
     windSpeed: 5
@@ -405,7 +405,7 @@ MonoBehaviour:
   lengthScale4: 32
   tile4: 128
   visualizeTile4: 0
-  visualizeLayer4: 1
+  visualizeLayer4: 0
   contributeDisplacement4: 0
   spectrum7:
     scale: 1
@@ -928,14 +928,14 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_LocalRotation: {x: 0.002988604, y: 0.9135208, z: -0.006712515, w: 0.40672565}
-  m_LocalPosition: {x: -811.7, y: 18, z: 744.9}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 3.86, z: -12.82}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0.842, y: 132, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &963194229
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1006,7 +1006,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e446a7d91cb1e1f4e9d2c57b7128a36d, type: 3}
   m_Name: 
@@ -1048,7 +1048,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f7405cba9b40be746b737b0b8bf7dbbf, type: 3}
   m_Name: 
@@ -1081,7 +1081,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d4752f3ce1141f248b7c6524e001f484, type: 3}
   m_Name: 

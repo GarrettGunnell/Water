@@ -83,7 +83,7 @@ public class FFTWater : MonoBehaviour {
     [Header("Layer One")]
     [Range(0, 2048)]
     public int lengthScale1 = 256;
-    [Range(0.01f, 200.0f)]
+    [Range(0.01f, 3.0f)]
     public float tile1 = 8.0f;
     public bool visualizeTile1 = false;
     public bool visualizeLayer1 = false;
@@ -96,7 +96,7 @@ public class FFTWater : MonoBehaviour {
     [Header("Layer Two")]
     [Range(0, 2048)]
     public int lengthScale2 = 256;
-    [Range(0.01f, 200.0f)]
+    [Range(0.01f, 3.0f)]
     public float tile2 = 8.0f;
     public bool visualizeTile2 = false;
     public bool visualizeLayer2 = false;
@@ -109,7 +109,7 @@ public class FFTWater : MonoBehaviour {
     [Header("Layer Three")]
     [Range(0, 2048)]
     public int lengthScale3 = 256;
-    [Range(0.01f, 200.0f)]
+    [Range(0.01f, 3.0f)]
     public float tile3 = 8.0f;
     public bool visualizeTile3 = false;
     public bool visualizeLayer3 = false;
@@ -122,7 +122,7 @@ public class FFTWater : MonoBehaviour {
     [Header("Layer Four")]
     [Range(0, 2048)]
     public int lengthScale4 = 256;
-    [Range(0.01f, 200.0f)]
+    [Range(0.01f, 3.0f)]
     public float tile4 = 8.0f;
     public bool visualizeTile4 = false;
     public bool visualizeLayer4 = false;
@@ -390,7 +390,6 @@ public class FFTWater : MonoBehaviour {
         rt.volumeDepth = depth;
         rt.useMipMap = useMips;
         rt.autoGenerateMips = false;
-        rt.enableRandomWrite = true;
         rt.anisoLevel = 16;
         rt.Create();
 
@@ -548,6 +547,8 @@ public class FFTWater : MonoBehaviour {
         Destroy(spectrumTextures);
         Destroy(pingPongTex);
         Destroy(pingPongTex2);
+
+        spectrumBuffer.Dispose();
     }
 
     private void OnDrawGizmos() {
