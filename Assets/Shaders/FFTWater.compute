@@ -11,6 +11,7 @@
 Texture2D<float2> _PingTex;
 RWTexture2DArray<float4> _SpectrumTextures, _InitialSpectrumTextures, _DisplacementTextures;
 RWTexture2DArray<float2> _SlopeTextures;
+RWTexture2D<float4> _BuoyancyData;
 
 float _FrameTime, _DeltaTime, _A, _Gravity, _RepeatTime, _Damping, _Depth, _LowCutoff, _HighCutoff;
 int _Seed;
@@ -169,8 +170,8 @@ void CS_InitializeSpectrum(uint3 id : SV_DISPATCHTHREADID) {
 [numthreads(8,8,1)]
 void CS_PackSpectrumConjugate(uint3 id : SV_DISPATCHTHREADID) {
     for (uint i = 0; i < 4; ++i) {
-        float2 h0 = _InitialSpectrumTextures[uint3(id.xy, i)];
-        float2 h0conj = _InitialSpectrumTextures[uint3((_N - id.x ) % _N, (_N - id.y) % _N, i)];
+        float2 h0 = _InitialSpectrumTextures[uint3(id.xy, i)].rg;
+        float2 h0conj = _InitialSpectrumTextures[uint3((_N - id.x ) % _N, (_N - id.y) % _N, i)].rg;
 
         _InitialSpectrumTextures[uint3(id.xy, i)] = float4(h0, h0conj.x, -h0conj.y);
     }
@@ -296,7 +297,7 @@ void CS_VerticalFFT(uint3 id : SV_DISPATCHTHREADID) {
     }
 }
 
-float4 Permute(float4 data, float2 id) {
+float4 Permute(float4 data, float3 id) {
     return data * (1.0f - 2.0f * ((id.x + id.y) % 2));
 }
 
@@ -330,6 +331,10 @@ void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
 
         _DisplacementTextures[uint3(id.xy, i)] = float4(displacement, foam);
         _SlopeTextures[uint3(id.xy, i)] = float2(slopes);
+
+        if (i == 0) {
+            _BuoyancyData[id.xy] = float4(displacement.y, slopes, 0.0f);
+        }
     }
 }
 

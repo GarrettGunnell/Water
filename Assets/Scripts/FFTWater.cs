@@ -243,7 +243,8 @@ public class FFTWater : MonoBehaviour {
                           initialSpectrumTextures, 
                           pingPongTex, 
                           pingPongTex2, 
-                          spectrumTextures;
+                          spectrumTextures,
+                          buoyancyDataTex;
 
     private ComputeBuffer spectrumBuffer;
 
@@ -263,6 +264,10 @@ public class FFTWater : MonoBehaviour {
 
     public RenderTexture GetDisplacementSpectrum() {
         return spectrumTextures;
+    }
+
+    public RenderTexture GetBuoyancyData() {
+        return buoyancyDataTex;
     }
 
     private void CreateWaterPlane() {
@@ -396,6 +401,19 @@ public class FFTWater : MonoBehaviour {
         return rt;
     }
 
+    RenderTexture CreateRenderTex(int width, int height, RenderTextureFormat format, bool useMips) {
+        RenderTexture rt = new RenderTexture(width, height, 0, format, RenderTextureReadWrite.Linear);
+        rt.filterMode = FilterMode.Bilinear;
+        rt.wrapMode = TextureWrapMode.Repeat;
+        rt.enableRandomWrite = true;
+        rt.useMipMap = useMips;
+        rt.autoGenerateMips = false;
+        rt.anisoLevel = 16;
+        rt.Create();
+
+        return rt;
+    }
+
 
     void OnEnable() {
         CreateWaterPlane();
@@ -411,6 +429,7 @@ public class FFTWater : MonoBehaviour {
 
         // pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
         // pingPongTex2 = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
+        buoyancyDataTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
 
         displacementTextures = CreateRenderTex(N, N, 4, RenderTextureFormat.ARGBHalf, true);
 
@@ -504,6 +523,7 @@ public class FFTWater : MonoBehaviour {
         fftComputeShader.SetTexture(5, "_DisplacementTextures", displacementTextures);
         fftComputeShader.SetTexture(5, "_SpectrumTextures", spectrumTextures);
         fftComputeShader.SetTexture(5, "_SlopeTextures", slopeTextures);
+        fftComputeShader.SetTexture(5, "_BuoyancyData", buoyancyDataTex);
         fftComputeShader.Dispatch(5, threadGroupsX, threadGroupsY, 1);
 
         
