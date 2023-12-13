@@ -525,7 +525,7 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ba836e03ed0a85d4889533b6dc1e27e3, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 308764994}
+      addedObject: {fileID: 308764998}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ba836e03ed0a85d4889533b6dc1e27e3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 308764990}
@@ -559,7 +559,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 308764988}
   serializedVersion: 4
-  m_Mass: 1
+  m_Mass: 3
   m_Drag: 0
   m_AngularDrag: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
@@ -578,8 +578,8 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!136 &308764994
-CapsuleCollider:
+--- !u!65 &308764998
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -596,11 +596,9 @@ CapsuleCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 1.04
-  m_Height: 5.0554924
-  m_Direction: 1
-  m_Center: {x: 0, y: 1.5277462, z: 0}
+  serializedVersion: 3
+  m_Size: {x: 1.5, y: 1.5, z: 1.5}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &320027525
 GameObject:
   m_ObjectHideFlags: 0
