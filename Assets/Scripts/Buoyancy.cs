@@ -8,6 +8,9 @@ using System.Collections.Generic;
 public class Buoyancy : MonoBehaviour {
     public FFTWater waterSource;
 
+    [Range(0.1f, 1.0f)]
+    public float normalizedVoxelSize = 0.1f;
+
     [Range(0.0f, 1.0f)]
     public float minimumDrag = 0.0f;
     
@@ -16,6 +19,11 @@ public class Buoyancy : MonoBehaviour {
 
     private Rigidbody rigidBody;
     private Collider cachedCollider;
+
+    private Voxel[,,] voxels;
+    private List<Vector3> receiverVoxels;
+    private Vector3 voxelSize;
+    private int voxelsPerAxis = 0;
 
     private struct Voxel {
         public Vector3 position { get; }
@@ -63,16 +71,10 @@ public class Buoyancy : MonoBehaviour {
         }
     };
 
-    private Voxel[,,] voxels;
-    private Vector3 voxelSize;
-    private int voxelsPerAxis = 0;
-
-    [Range(0.1f, 1.0f)]
-    public float normalizedVoxelSize = 0.1f;
-
-
     // Largely referenced from https://github.com/dbrizov/NaughtyWaterBuoyancy/blob/master/Assets/NaughtyWaterBuoyancy/Scripts/Core/FloatingObject.cs
     private void CreateVoxels() {
+        receiverVoxels = new List<Vector3>();
+
         Quaternion initialRotation = this.transform.rotation;
         this.transform.rotation = Quaternion.identity;
 
@@ -89,6 +91,8 @@ public class Buoyancy : MonoBehaviour {
                     point += bounds.min;
 
                     voxels[x,y,z] = new Voxel(this.transform.InverseTransformPoint(point), waterSource, true);
+
+                    if (true) receiverVoxels.Add(new Vector3(x, y, z));
                 }
             }
         }
@@ -107,24 +111,20 @@ public class Buoyancy : MonoBehaviour {
     void Update() {
         if (waterSource == null || voxels == null) return;
 
-        for (int x = 0; x < voxelsPerAxis; ++x) {
-            for (int y = 0; y < voxelsPerAxis; ++y) {
-                for (int z = 0; z < voxelsPerAxis; ++z) {
-                    voxels[x,y,z].Update(this.transform);
-                }
-            }
+        for (int i = 0; i < receiverVoxels.Count; ++i) {
+            // This is probably the most ridiculous line of code I have ever written
+            // but as far as I know C# doesn't let you store real references so instead
+            // I store the indices of the voxels that read from the GPU that way we don't
+            // waste time iterating through voxels that don't need to check their requests
+            // it'd be smarter to just do a 1D array for all the voxels but I love multidimensional arrays ok
+            voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].Update(this.transform);
         }
     }
 
     void FixedUpdate() {
-        Vector3 pos = this.transform.position;
-
         float volume = cachedCollider.bounds.size.x * cachedCollider.bounds.size.y * cachedCollider.bounds.size.z;
         float density = rigidBody.mass / volume;
 
-        Vector3 maxBuoyancy = 1.0f * volume * -Physics.gravity;
-
-        Vector3 maxVoxelForce = maxBuoyancy / voxels.Length;
         float submergedVolume = 0.0f;
         float voxelHeight = cachedCollider.bounds.size.y * normalizedVoxelSize;
 
