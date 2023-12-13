@@ -11,7 +11,7 @@
 Texture2D<float2> _PingTex;
 RWTexture2DArray<float4> _SpectrumTextures, _InitialSpectrumTextures, _DisplacementTextures;
 RWTexture2DArray<float2> _SlopeTextures;
-RWTexture2D<float4> _BuoyancyData;
+RWTexture2D<half> _BuoyancyData;
 
 float _FrameTime, _DeltaTime, _A, _Gravity, _RepeatTime, _Damping, _Depth, _LowCutoff, _HighCutoff;
 int _Seed;
@@ -333,7 +333,7 @@ void CS_AssembleMaps(uint3 id : SV_DISPATCHTHREADID) {
         _SlopeTextures[uint3(id.xy, i)] = float2(slopes);
 
         if (i == 0) {
-            _BuoyancyData[id.xy] = float4(displacement.y, slopes, 0.0f);
+            _BuoyancyData[id.xy] = displacement.y;
         }
     }
 }

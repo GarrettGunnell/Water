@@ -8,18 +8,18 @@ using System.Collections.Generic;
 public class Buoyancy : MonoBehaviour {
     public FFTWater waterSource;
 
-    private AsyncGPUReadbackRequest buoyancyDataRequest;
+    [Range(0.0f, 1.0f)]
+    public float minimumDrag = 0.0f;
+    
+    [Range(0.0f, 1.0f)]
+    public float minimumAngularDrag = 0.05f;
 
     private Rigidbody rigidBody;
     private Collider cachedCollider;
-    private int cachedFrameCount;
-    private Vector3 cachedBuoyancyData = Vector3.zero;
-    private Vector3 cachedNormal = Vector3.zero;
 
     private struct Voxel {
         public Vector3 position { get; }
-        private Vector3 cachedBuoyancyData;
-        private Vector3 cachedNormal;
+        private float cachedBuoyancyData;
         private FFTWater waterSource;
         public bool isReceiver;
 
@@ -28,8 +28,7 @@ public class Buoyancy : MonoBehaviour {
         public Voxel(Vector3 position, FFTWater waterSource, bool isReceiver) {
             this.position = position;
             this.waterSource = waterSource;
-            this.cachedBuoyancyData = Vector3.zero;
-            this.cachedNormal = Vector3.up;
+            this.cachedBuoyancyData = 0.0f;
             this.isReceiver = isReceiver;
 
             if (isReceiver)
@@ -38,11 +37,7 @@ public class Buoyancy : MonoBehaviour {
         }
 
         public float GetWaterHeight() {
-            return cachedBuoyancyData.x;
-        }
-
-        public Vector3 GetNormal() {
-            return cachedNormal;
+            return cachedBuoyancyData;
         }
 
         public void Update(Transform parentTransform) {
@@ -54,10 +49,7 @@ public class Buoyancy : MonoBehaviour {
 
                 NativeArray<ushort> buoyancyDataQuery = voxelWaterRequest.GetData<ushort>();
 
-                cachedBuoyancyData = new Vector3(Mathf.HalfToFloat(buoyancyDataQuery[0]), Mathf.HalfToFloat(buoyancyDataQuery[1]), Mathf.HalfToFloat(buoyancyDataQuery[2]));
-
-                cachedNormal = new Vector3(-cachedBuoyancyData.y, 1.0f, -cachedBuoyancyData.z);
-                cachedNormal.Normalize();
+                cachedBuoyancyData = Mathf.HalfToFloat(buoyancyDataQuery[0]);
 
                 Vector3 worldPos = parentTransform.TransformPoint(this.position);
                 Vector2 pos = new Vector2(worldPos.x, worldPos.z);
@@ -96,7 +88,7 @@ public class Buoyancy : MonoBehaviour {
                     point.Scale(new Vector3(x + 0.5f, y + 0.5f, z + 0.5f));
                     point += bounds.min;
 
-                    voxels[x,y,z] = new Voxel(this.transform.InverseTransformPoint(point), waterSource, y == 0);
+                    voxels[x,y,z] = new Voxel(this.transform.InverseTransformPoint(point), waterSource, true);
                 }
             }
         }
@@ -108,9 +100,6 @@ public class Buoyancy : MonoBehaviour {
 
         rigidBody = GetComponent<Rigidbody>();
         cachedCollider = GetComponent<Collider>();
-
-        buoyancyDataRequest = AsyncGPUReadback.Request(waterSource.GetBuoyancyData(), 0, 0, 1, 0, 1, 0, 1, null);
-        cachedFrameCount = Time.frameCount;
 
         CreateVoxels();
     }
@@ -139,6 +128,8 @@ public class Buoyancy : MonoBehaviour {
         float submergedVolume = 0.0f;
         float voxelHeight = cachedCollider.bounds.size.y * normalizedVoxelSize;
 
+        float UnitForce = (1.0f - density) / voxels.Length;
+
         for (int x = 0; x < voxelsPerAxis; ++x) {
             for (int y = 0; y < voxelsPerAxis; ++y) {
                 for (int z = 0; z < voxelsPerAxis; ++z) {
@@ -149,11 +140,10 @@ public class Buoyancy : MonoBehaviour {
                     float submergedFactor = Mathf.Clamp(depth / voxelHeight, 0.0f, 1.0f);
                     submergedVolume += submergedFactor;
 
-                    Vector3 surfaceNormal = voxels[x,y,z].isReceiver ? voxels[x,y,z].GetNormal() : voxels[x,0,z].GetNormal();
-                    Quaternion surfaceRotation = Quaternion.FromToRotation(new Vector3(0, 1, 0), surfaceNormal);
-                    surfaceRotation = Quaternion.Slerp(surfaceRotation, Quaternion.identity, depth);
+                    float Displacement = max(0, depth);
 
-                    Vector3 F = surfaceRotation * (maxVoxelForce * submergedFactor);
+
+                    Vector3 F = -Physics.gravity * Displacement * UnitForce;
                     rigidBody.AddForceAtPosition(F, worldPos);
                 }
             }
@@ -161,8 +151,8 @@ public class Buoyancy : MonoBehaviour {
 
         submergedVolume /= voxels.Length;
 
-        this.rigidBody.drag = Mathf.Lerp(0.0f, 1.0f, submergedVolume);
-        this.rigidBody.angularDrag = Mathf.Lerp(0.5f, 1.0f, submergedVolume);
+        this.rigidBody.drag = Mathf.Lerp(minimumDrag, 1.0f, submergedVolume);
+        this.rigidBody.angularDrag = Mathf.Lerp(minimumAngularDrag, 1.0f, submergedVolume);
     }
 
     void OnDisable() {

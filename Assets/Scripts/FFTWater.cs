@@ -429,7 +429,7 @@ public class FFTWater : MonoBehaviour {
 
         // pingPongTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
         // pingPongTex2 = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
-        buoyancyDataTex = CreateRenderTex(N, N, RenderTextureFormat.ARGBHalf, false);
+        buoyancyDataTex = CreateRenderTex(N, N, RenderTextureFormat.RHalf, false);
 
         displacementTextures = CreateRenderTex(N, N, 4, RenderTextureFormat.ARGBHalf, true);
 
