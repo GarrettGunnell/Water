@@ -11,6 +11,8 @@ public class Buoyancy : MonoBehaviour {
     [Range(0.1f, 1.0f)]
     public float normalizedVoxelSize = 0.1f;
 
+    public bool onlyReadbackBottomVoxels = false;
+
     [Range(0.0f, 1.0f)]
     public float minimumDrag = 0.0f;
     
@@ -90,9 +92,9 @@ public class Buoyancy : MonoBehaviour {
                     point.Scale(new Vector3(x + 0.5f, y + 0.5f, z + 0.5f));
                     point += bounds.min;
 
-                    voxels[x,y,z] = new Voxel(this.transform.InverseTransformPoint(point), waterSource, true);
+                    voxels[x,y,z] = new Voxel(this.transform.InverseTransformPoint(point), waterSource, onlyReadbackBottomVoxels && y == 0);
 
-                    if (true) receiverVoxels.Add(new Vector3(x, y, z));
+                    if (onlyReadbackBottomVoxels && y == 0) receiverVoxels.Add(new Vector3(x, y, z));
                 }
             }
         }
@@ -108,6 +110,62 @@ public class Buoyancy : MonoBehaviour {
         CreateVoxels();
     }
 
+    
+    public Vector3 origin, direction;
+
+    // Taken from https://github.com/zalo/MathUtilities/blob/master/Assets/LeastSquares/LeastSquaresFitting.cs
+    public static class Fit {
+        public static void Line(List<Vector3> points, out Vector3 origin, ref Vector3 direction, int iters = 100, bool drawGizmos = false) {
+            if (direction == Vector3.zero || float.IsNaN(direction.x) || float.IsInfinity(direction.x)) direction = Vector3.up;
+
+            //Calculate Average
+            origin = Vector3.zero;
+            for (int i = 0; i < points.Count; i++) origin += points[i];
+            origin /= points.Count;
+
+            // Step the optimal fitting line approximation:
+            for (int iter = 0; iter < iters; iter++) {
+                Vector3 newDirection = Vector3.zero;
+                foreach (Vector3 worldSpacePoint in points) {
+                    Vector3 point = worldSpacePoint - origin;
+                    newDirection += Vector3.Dot(direction, point) * point;
+                }
+                direction = newDirection.normalized;
+            }
+        }
+
+        public static void Plane(List<Vector3> points, out Vector3 position, out Vector3 normal, int iters = 200, bool drawGizmos = false) {
+            //Find the primary principal axis
+            Vector3 primaryDirection = Vector3.right;
+            Line(points, out position, ref primaryDirection, iters / 2, false);
+
+            //Flatten the points along that axis
+            List<Vector3> flattenedPoints = new List<Vector3>(points);
+            for (int i = 0; i < flattenedPoints.Count; i++)
+                flattenedPoints[i] = Vector3.ProjectOnPlane(points[i] - position, primaryDirection) + position;
+
+            //Find the secondary principal axis
+            Vector3 secondaryDirection = Vector3.right;
+            Line(flattenedPoints, out position, ref secondaryDirection, iters / 2, false);
+
+            normal = Vector3.Cross(primaryDirection, secondaryDirection).normalized;
+            // Debug.Log("Primary Direction: " + primaryDirection.ToString());
+            // Debug.Log("Secondary Direction: " + secondaryDirection.ToString());
+            // Debug.Log("Normal: " + normal.ToString());
+
+            if (drawGizmos) {
+                Gizmos.color = Color.red;
+                foreach (Vector3 point in points) Gizmos.DrawLine(point, Vector3.ProjectOnPlane(point - position, normal) + position);
+                Gizmos.color = Color.blue;
+                Gizmos.DrawRay(position, normal * 0.5f); Gizmos.DrawRay(position, -normal * 0.5f);
+                Gizmos.matrix = Matrix4x4.TRS(position, Quaternion.LookRotation(normal, primaryDirection), new Vector3(1f, 1f, 0.001f));
+                Gizmos.DrawSphere(Vector3.zero, 1f);
+                Gizmos.matrix = Matrix4x4.identity;
+            }
+        }
+    }
+
+    List<Vector3> points;
     void Update() {
         if (waterSource == null || voxels == null) return;
 
@@ -118,6 +176,15 @@ public class Buoyancy : MonoBehaviour {
             // waste time iterating through voxels that don't need to check their requests
             // it'd be smarter to just do a 1D array for all the voxels but I love multidimensional arrays ok
             voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].Update(this.transform);
+        }
+
+        
+        points = new List<Vector3>();
+
+        for (int i = 0; i < receiverVoxels.Count; ++i) {
+            Vector3 pos = this.transform.TransformPoint(voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].position);
+            pos.y = voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].GetWaterHeight();
+            points.Add(pos);
         }
     }
 
@@ -160,15 +227,16 @@ public class Buoyancy : MonoBehaviour {
     }
 
     private void OnDrawGizmos() {
-        if (this.voxels != null) {        
-            for (int x = 0; x < voxelsPerAxis; ++x) {
-                for (int y = 0; y < voxelsPerAxis; ++y) {
-                    for (int z = 0; z < voxelsPerAxis; ++z) {
-                        Gizmos.color = this.voxels[x,y,z].isReceiver ? Color.green : Color.red;
-                        Gizmos.DrawCube(this.transform.TransformPoint(this.voxels[x,y,z].position), this.voxelSize * 0.8f);
-                    }
-                }
-            }
+        if (this.voxels != null) {
+        Fit.Plane(points, out origin, out direction, 50, true);
+        //     for (int x = 0; x < voxelsPerAxis; ++x) {
+        //         for (int y = 0; y < voxelsPerAxis; ++y) {
+        //             for (int z = 0; z < voxelsPerAxis; ++z) {
+        //                 Gizmos.color = this.voxels[x,y,z].isReceiver ? Color.green : Color.red;
+        //                 Gizmos.DrawCube(this.transform.TransformPoint(this.voxels[x,y,z].position), this.voxelSize * 0.8f);
+        //             }
+        //         }
+        //     }
         }
     }
 }
