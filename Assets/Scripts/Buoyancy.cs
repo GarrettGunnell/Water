@@ -8,6 +8,9 @@ using System.Collections.Generic;
 public class Buoyancy : MonoBehaviour {
     public FFTWater waterSource;
 
+    public enum SimulationType { Legitimate, PlaneFitApproximation };
+    public SimulationType simulationType = SimulationType.Legitimate;
+
     [Range(0.1f, 1.0f)]
     public float normalizedVoxelSize = 0.1f;
 
@@ -136,7 +139,7 @@ public class Buoyancy : MonoBehaviour {
 
         public static void Plane(List<Vector3> points, out Vector3 position, out Vector3 normal, int iters = 200, bool drawGizmos = false) {
             //Find the primary principal axis
-            Vector3 primaryDirection = Vector3.right;
+            Vector3 primaryDirection = Vector3.up;
             Line(points, out position, ref primaryDirection, iters / 2, false);
 
             //Flatten the points along that axis
@@ -145,7 +148,7 @@ public class Buoyancy : MonoBehaviour {
                 flattenedPoints[i] = Vector3.ProjectOnPlane(points[i] - position, primaryDirection) + position;
 
             //Find the secondary principal axis
-            Vector3 secondaryDirection = Vector3.right;
+            Vector3 secondaryDirection = Vector3.up;
             Line(flattenedPoints, out position, ref secondaryDirection, iters / 2, false);
 
             normal = Vector3.Cross(primaryDirection, secondaryDirection).normalized;
@@ -168,58 +171,68 @@ public class Buoyancy : MonoBehaviour {
     List<Vector3> points;
     void Update() {
         if (waterSource == null || voxels == null) return;
+        if (simulationType == SimulationType.PlaneFitApproximation && !rigidBody.isKinematic) rigidBody.isKinematic = true;
+        if (simulationType == SimulationType.Legitimate && rigidBody.isKinematic) rigidBody.isKinematic = false;
 
         for (int i = 0; i < receiverVoxels.Count; ++i) {
             // This is probably the most ridiculous line of code I have ever written
             // but as far as I know C# doesn't let you store real references so instead
             // I store the indices of the voxels that read from the GPU that way we don't
             // waste time iterating through voxels that don't need to check their requests
-            // it'd be smarter to just do a 1D array for all the voxels but I love multidimensional arrays ok
+            // it'd be smarter to just do a 1D array for all the voxels so that I store an int
+            // instead of a vec3 but I love multidimensional arrays ok
             voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].Update(this.transform);
-        }
-
-        
-        points = new List<Vector3>();
-
-        for (int i = 0; i < receiverVoxels.Count; ++i) {
-            Vector3 pos = this.transform.TransformPoint(voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].position);
-            pos.y = voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].GetWaterHeight();
-            points.Add(pos);
         }
     }
 
     void FixedUpdate() {
-        float volume = cachedCollider.bounds.size.x * cachedCollider.bounds.size.y * cachedCollider.bounds.size.z;
-        float density = rigidBody.mass / volume;
+        if (simulationType == SimulationType.Legitimate) {
+            float volume = cachedCollider.bounds.size.x * cachedCollider.bounds.size.y * cachedCollider.bounds.size.z;
+            float density = rigidBody.mass / volume;
 
-        float submergedVolume = 0.0f;
-        float voxelHeight = cachedCollider.bounds.size.y * normalizedVoxelSize;
+            float submergedVolume = 0.0f;
+            float voxelHeight = cachedCollider.bounds.size.y * normalizedVoxelSize;
 
-        float UnitForce = (1.0f - density) / voxels.Length;
+            float UnitForce = (1.0f - density) / voxels.Length;
 
-        for (int x = 0; x < voxelsPerAxis; ++x) {
-            for (int y = 0; y < voxelsPerAxis; ++y) {
-                for (int z = 0; z < voxelsPerAxis; ++z) {
-                    Vector3 worldPos = this.transform.TransformPoint(voxels[x,y,z].position);
+            for (int x = 0; x < voxelsPerAxis; ++x) {
+                for (int y = 0; y < voxelsPerAxis; ++y) {
+                    for (int z = 0; z < voxelsPerAxis; ++z) {
+                        Vector3 worldPos = this.transform.TransformPoint(voxels[x,y,z].position);
 
-                    float waterLevel = voxels[x,y,z].isReceiver ? voxels[x,y,z].GetWaterHeight() : voxels[x,0,z].GetWaterHeight();
-                    float depth = waterLevel - worldPos.y;
-                    float submergedFactor = Mathf.Clamp(depth / voxelHeight, 0.0f, 1.0f);
-                    submergedVolume += submergedFactor;
+                        float waterLevel = voxels[x,y,z].isReceiver ? voxels[x,y,z].GetWaterHeight() : voxels[x,0,z].GetWaterHeight();
+                        float depth = waterLevel - worldPos.y;
+                        float submergedFactor = Mathf.Clamp(depth / voxelHeight, 0.0f, 1.0f);
+                        submergedVolume += submergedFactor;
 
-                    float Displacement = max(0, depth);
+                        float Displacement = Mathf.Max(0.0f, depth);
 
-
-                    Vector3 F = -Physics.gravity * Displacement * UnitForce;
-                    rigidBody.AddForceAtPosition(F, worldPos);
+                        Vector3 F = -Physics.gravity * Displacement * UnitForce;
+                        rigidBody.AddForceAtPosition(F, worldPos);
+                    }
                 }
             }
+
+            submergedVolume /= voxels.Length;
+
+            this.rigidBody.drag = Mathf.Lerp(minimumDrag, 1.0f, submergedVolume);
+            this.rigidBody.angularDrag = Mathf.Lerp(minimumAngularDrag, 1.0f, submergedVolume);
         }
 
-        submergedVolume /= voxels.Length;
+        if (simulationType == SimulationType.PlaneFitApproximation) {
+            points = new List<Vector3>();
 
-        this.rigidBody.drag = Mathf.Lerp(minimumDrag, 1.0f, submergedVolume);
-        this.rigidBody.angularDrag = Mathf.Lerp(minimumAngularDrag, 1.0f, submergedVolume);
+            for (int i = 0; i < receiverVoxels.Count; ++i) {
+                Vector3 pos = this.transform.TransformPoint(voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].position);
+                pos.y = voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].GetWaterHeight();
+                points.Add(pos);
+            }
+            
+            Fit.Plane(points, out origin, out direction, 50, false);
+            direction.y = 1;
+            direction.Normalize();
+            this.transform.rotation = Quaternion.FromToRotation(Vector3.up, direction);
+        }
     }
 
     void OnDisable() {
@@ -228,7 +241,7 @@ public class Buoyancy : MonoBehaviour {
 
     private void OnDrawGizmos() {
         if (this.voxels != null) {
-        Fit.Plane(points, out origin, out direction, 50, true);
+            Fit.Plane(points, out origin, out direction, 50, true);
         //     for (int x = 0; x < voxelsPerAxis; ++x) {
         //         for (int y = 0; y < voxelsPerAxis; ++y) {
         //             for (int z = 0; z < voxelsPerAxis; ++z) {

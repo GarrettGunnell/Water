@@ -19,7 +19,7 @@ MonoBehaviour:
     width: 1920
     height: 997
   m_ShowMode: 4
-  m_Title: Scene
+  m_Title: Game
   m_RootView: {fileID: 11}
   m_MinSize: {x: 875, y: 300}
   m_MaxSize: {x: 10000, y: 10000}
@@ -1161,7 +1161,7 @@ MonoBehaviour:
   m_AudioPlay: 0
   m_DebugDrawModesUseInteractiveLightBakingData: 0
   m_Position:
-    m_Target: {x: -0.813246, y: 0.97964907, z: 0.12283325}
+    m_Target: {x: -2.6847403, y: -3.3147635, z: -2.587337}
     speed: 2
     m_Value: {x: -1.8543091, y: 7.122008, z: 26.307285}
   m_RenderMode: 0
@@ -1209,7 +1209,7 @@ MonoBehaviour:
     m_GridAxis: 1
     m_gridOpacity: 0.5
   m_Rotation:
-    m_Target: {x: -0.24884672, y: -0.25962338, z: 0.06942176, w: -0.93052644}
+    m_Target: {x: -0.12320309, y: 0.87522966, z: -0.30156153, w: -0.35760647}
     speed: 2
     m_Value: {x: -0.040190868, y: 0.39694384, z: -0.017399631, w: -0.9168023}
   m_Size:
