@@ -189,7 +189,7 @@ public class Buoyancy : MonoBehaviour {
         }
 
         if (simulationType == SimulationType.PlaneFitApproximation) {
-            if (Time.time - cachedTime > 0.1f) {
+            if (t >= 0.5f) {
                 cachedTime = Time.time;
                 points = new List<Vector3>();
 
@@ -199,10 +199,8 @@ public class Buoyancy : MonoBehaviour {
                     points.Add(pos);
                 }
                 
-                Fit.Plane(points, out origin, out direction, 20, false);
+                Fit.Plane(points, out origin, out direction, 100, false);
                 direction.y = 1;
-                direction.x *= 5.0f;
-                direction.z *= 5.0f;
                 direction.Normalize();
                 cachedRotation = this.transform.rotation;
                 targetRotation = Quaternion.FromToRotation(Vector3.up, direction);
@@ -213,10 +211,11 @@ public class Buoyancy : MonoBehaviour {
             } else {
                 Vector3 position = this.transform.position;
                 
-                t += Time.deltaTime * 1.25f;
-                position.y = Mathf.Lerp(cachedOrigin.y, origin.y, t * 2.0f);
+                t += Time.deltaTime * 2.0f;
+
+                position.y = Mathf.Lerp(cachedOrigin.y, origin.y, t);
                 this.transform.position = position;
-                this.transform.rotation = Quaternion.RotateTowards(this.transform.rotation, targetRotation, t - t * t);
+                this.transform.rotation = Quaternion.Slerp(cachedRotation, targetRotation, t);
             }
         }
     }
