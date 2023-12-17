@@ -30,6 +30,11 @@ public class Buoyancy : MonoBehaviour {
     private Vector3 voxelSize;
     private int voxelsPerAxis = 0;
 
+    private Vector3 origin, direction, cachedDirection, cachedOrigin;
+    private Quaternion cachedRotation, targetRotation;
+    private float cachedTime = 0;
+    private float t = 0.0f;
+
     private struct Voxel {
         public Vector3 position { get; }
         private float cachedBuoyancyData;
@@ -109,12 +114,11 @@ public class Buoyancy : MonoBehaviour {
 
         rigidBody = GetComponent<Rigidbody>();
         cachedCollider = GetComponent<Collider>();
+        cachedRotation = Quaternion.identity;
+        targetRotation = Quaternion.identity;
 
         CreateVoxels();
     }
-
-    
-    public Vector3 origin, direction;
 
     // Taken from https://github.com/zalo/MathUtilities/blob/master/Assets/LeastSquares/LeastSquaresFitting.cs
     public static class Fit {
@@ -139,7 +143,7 @@ public class Buoyancy : MonoBehaviour {
 
         public static void Plane(List<Vector3> points, out Vector3 position, out Vector3 normal, int iters = 200, bool drawGizmos = false) {
             //Find the primary principal axis
-            Vector3 primaryDirection = Vector3.up;
+            Vector3 primaryDirection = Vector3.right;
             Line(points, out position, ref primaryDirection, iters / 2, false);
 
             //Flatten the points along that axis
@@ -148,7 +152,7 @@ public class Buoyancy : MonoBehaviour {
                 flattenedPoints[i] = Vector3.ProjectOnPlane(points[i] - position, primaryDirection) + position;
 
             //Find the secondary principal axis
-            Vector3 secondaryDirection = Vector3.up;
+            Vector3 secondaryDirection = Vector3.right;
             Line(flattenedPoints, out position, ref secondaryDirection, iters / 2, false);
 
             normal = Vector3.Cross(primaryDirection, secondaryDirection).normalized;
@@ -182,6 +186,38 @@ public class Buoyancy : MonoBehaviour {
             // it'd be smarter to just do a 1D array for all the voxels so that I store an int
             // instead of a vec3 but I love multidimensional arrays ok
             voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].Update(this.transform);
+        }
+
+        if (simulationType == SimulationType.PlaneFitApproximation) {
+            if (Time.time - cachedTime > 0.1f) {
+                cachedTime = Time.time;
+                points = new List<Vector3>();
+
+                for (int i = 0; i < receiverVoxels.Count; ++i) {
+                    Vector3 pos = this.transform.TransformPoint(voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].position);
+                    pos.y = voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].GetWaterHeight();
+                    points.Add(pos);
+                }
+                
+                Fit.Plane(points, out origin, out direction, 20, false);
+                direction.y = 1;
+                direction.x *= 5.0f;
+                direction.z *= 5.0f;
+                direction.Normalize();
+                cachedRotation = this.transform.rotation;
+                targetRotation = Quaternion.FromToRotation(Vector3.up, direction);
+                cachedDirection = direction;
+                cachedOrigin = this.transform.position;
+
+                t = 0.0f;
+            } else {
+                Vector3 position = this.transform.position;
+                
+                t += Time.deltaTime * 1.25f;
+                position.y = Mathf.Lerp(cachedOrigin.y, origin.y, t * 2.0f);
+                this.transform.position = position;
+                this.transform.rotation = Quaternion.RotateTowards(this.transform.rotation, targetRotation, t - t * t);
+            }
         }
     }
 
@@ -217,21 +253,6 @@ public class Buoyancy : MonoBehaviour {
 
             this.rigidBody.drag = Mathf.Lerp(minimumDrag, 1.0f, submergedVolume);
             this.rigidBody.angularDrag = Mathf.Lerp(minimumAngularDrag, 1.0f, submergedVolume);
-        }
-
-        if (simulationType == SimulationType.PlaneFitApproximation) {
-            points = new List<Vector3>();
-
-            for (int i = 0; i < receiverVoxels.Count; ++i) {
-                Vector3 pos = this.transform.TransformPoint(voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].position);
-                pos.y = voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].GetWaterHeight();
-                points.Add(pos);
-            }
-            
-            Fit.Plane(points, out origin, out direction, 50, false);
-            direction.y = 1;
-            direction.Normalize();
-            this.transform.rotation = Quaternion.FromToRotation(Vector3.up, direction);
         }
     }
 
