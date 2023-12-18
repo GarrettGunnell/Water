@@ -11,6 +11,8 @@ public class Buoyancy : MonoBehaviour {
     public enum SimulationType { Legitimate, PlaneFitApproximation };
     public SimulationType simulationType = SimulationType.Legitimate;
 
+    [Header("Buoyancy Sim Settings")]
+    [Space(5)]
     [Range(0.1f, 1.0f)]
     public float normalizedVoxelSize = 0.1f;
 
@@ -22,6 +24,20 @@ public class Buoyancy : MonoBehaviour {
     [Range(0.0f, 1.0f)]
     public float minimumAngularDrag = 0.05f;
 
+    [Header("Fake Sim Settings")]
+    [Space(5)]
+    [Range(0.01f, 10.0f)]
+    public float stiffness = 1.0f;
+
+    [Range(0.01f, 10.0f)]
+    public float angularStiffness = 1.0f;
+
+    [Range(0.01f, 10.0f)]
+    public float directionalStrength = 1.0f;
+
+    [Range(0.01f, 5.0f)]
+    public float angleThreshold = 1.5f;
+
     private Rigidbody rigidBody;
     private Collider cachedCollider;
 
@@ -30,10 +46,13 @@ public class Buoyancy : MonoBehaviour {
     private Vector3 voxelSize;
     private int voxelsPerAxis = 0;
 
-    private Vector3 origin, direction, cachedDirection, cachedOrigin;
-    private Quaternion cachedRotation, targetRotation;
-    private float cachedTime = 0;
-    private float t = 0.0f;
+    private Vector3 origin, direction;
+    private Quaternion targetRotation;
+    
+    List<Vector3> points;
+    Queue<Vector3> cachedDirections;
+    
+    private float velocity = 0.0f;
 
     private struct Voxel {
         public Vector3 position { get; }
@@ -114,8 +133,8 @@ public class Buoyancy : MonoBehaviour {
 
         rigidBody = GetComponent<Rigidbody>();
         cachedCollider = GetComponent<Collider>();
-        cachedRotation = Quaternion.identity;
         targetRotation = Quaternion.identity;
+        cachedDirections = new Queue<Vector3>();
 
         CreateVoxels();
     }
@@ -156,9 +175,6 @@ public class Buoyancy : MonoBehaviour {
             Line(flattenedPoints, out position, ref secondaryDirection, iters / 2, false);
 
             normal = Vector3.Cross(primaryDirection, secondaryDirection).normalized;
-            // Debug.Log("Primary Direction: " + primaryDirection.ToString());
-            // Debug.Log("Secondary Direction: " + secondaryDirection.ToString());
-            // Debug.Log("Normal: " + normal.ToString());
 
             if (drawGizmos) {
                 Gizmos.color = Color.red;
@@ -172,7 +188,21 @@ public class Buoyancy : MonoBehaviour {
         }
     }
 
-    List<Vector3> points;
+    private Vector3 GetAverageDirection() {
+        if (cachedDirections.Count == 0) return Vector3.up;
+
+        Vector3 directionSum = Vector3.zero;
+        Vector3[] directionArray = cachedDirections.ToArray();
+        for (int i = 0; i < cachedDirections.Count; ++i) {
+            directionSum += directionArray[i];
+        }
+
+        directionSum /= cachedDirections.Count;
+        directionSum.Normalize();
+
+        return directionSum;
+    }
+
     void Update() {
         if (waterSource == null || voxels == null) return;
         if (simulationType == SimulationType.PlaneFitApproximation && !rigidBody.isKinematic) rigidBody.isKinematic = true;
@@ -189,34 +219,43 @@ public class Buoyancy : MonoBehaviour {
         }
 
         if (simulationType == SimulationType.PlaneFitApproximation) {
-            if (t >= 0.5f) {
-                cachedTime = Time.time;
-                points = new List<Vector3>();
+            points = new List<Vector3>();
 
-                for (int i = 0; i < receiverVoxels.Count; ++i) {
-                    Vector3 pos = this.transform.TransformPoint(voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].position);
-                    pos.y = voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].GetWaterHeight();
-                    points.Add(pos);
-                }
-                
-                Fit.Plane(points, out origin, out direction, 100, false);
-                direction.y = 1;
-                direction.Normalize();
-                cachedRotation = this.transform.rotation;
-                targetRotation = Quaternion.FromToRotation(Vector3.up, direction);
-                cachedDirection = direction;
-                cachedOrigin = this.transform.position;
-
-                t = 0.0f;
-            } else {
-                Vector3 position = this.transform.position;
-                
-                t += Time.deltaTime * 2.0f;
-
-                position.y = Mathf.Lerp(cachedOrigin.y, origin.y, t);
-                this.transform.position = position;
-                this.transform.rotation = Quaternion.Slerp(cachedRotation, targetRotation, t);
+            for (int i = 0; i < receiverVoxels.Count; ++i) {
+                Vector3 pos = this.transform.TransformPoint(voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].position);
+                pos.y = voxels[(int)receiverVoxels[i].x, (int)receiverVoxels[i].y, (int)receiverVoxels[i].z].GetWaterHeight();
+                points.Add(pos);
             }
+            
+            Fit.Plane(points, out origin, out direction, 100, false);
+            direction.y = 1;
+            direction.x *= directionalStrength;
+            direction.z *= directionalStrength;
+            direction.Normalize();
+
+            cachedDirections.Enqueue(direction);
+            if (cachedDirections.Count > 10) cachedDirections.Dequeue();
+
+            Vector3 avgDirection = GetAverageDirection();
+            Quaternion avgRotation = Quaternion.FromToRotation(Vector3.up, avgDirection);
+
+            float Fspring = -stiffness * origin.y;
+            float a = Fspring / rigidBody.mass;
+
+            velocity += a * Time.deltaTime;
+            
+            Vector3 position = this.transform.position;
+            position.y = origin.y - velocity * Time.deltaTime;
+            this.transform.position = position;
+
+            float angularDistance = Quaternion.Angle(Quaternion.identity, avgRotation);
+            float FxAngle = -angularStiffness * angularDistance;
+            float aa = FxAngle / rigidBody.mass;
+           
+            float localAngularDistance = Quaternion.Angle(this.transform.rotation, avgRotation);
+            if (localAngularDistance > angleThreshold)
+                this.transform.rotation = Quaternion.RotateTowards(this.transform.rotation, avgRotation, Mathf.Max(0.0f, localAngularDistance - aa * Time.deltaTime) * 0.01f);
+           
         }
     }
 

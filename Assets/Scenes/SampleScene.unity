@@ -337,8 +337,8 @@ MonoBehaviour:
   visualizeLayer1: 1
   contributeDisplacement1: 1
   spectrum1:
-    scale: 0.26
-    windSpeed: 5
+    scale: 0.1
+    windSpeed: 2
     windDirection: 22
     fetch: 100000
     spreadBlend: 0.642
@@ -347,7 +347,7 @@ MonoBehaviour:
     shortWavesFade: 0.025
   spectrum2:
     scale: 0.07
-    windSpeed: 20
+    windSpeed: 2
     windDirection: 59
     fetch: 1000
     spreadBlend: 0
@@ -551,6 +551,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   waterSource: {fileID: 19044813}
+  simulationType: 1
+  normalizedVoxelSize: 0.1
+  onlyReadbackBottomVoxels: 1
+  minimumDrag: 0
+  minimumAngularDrag: 0.05
 --- !u!54 &308764990
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -559,7 +564,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 308764988}
   serializedVersion: 4
-  m_Mass: 3
+  m_Mass: 0.75
   m_Drag: 0
   m_AngularDrag: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
@@ -597,7 +602,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.5, y: 1.5, z: 1.5}
+  m_Size: {x: 2, y: 1.5, z: 2}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &320027525
 GameObject:
@@ -806,6 +811,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   waterSource: {fileID: 19044813}
+  simulationType: 0
+  normalizedVoxelSize: 0.1
+  onlyReadbackBottomVoxels: 0
+  minimumDrag: 0
+  minimumAngularDrag: 0.05
 --- !u!54 &526205867
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -979,7 +989,7 @@ Light:
     m_CustomResolution: -1
     m_Strength: 1
     m_Bias: 0.05
-    m_NormalBias: 0.4
+    m_NormalBias: 0
     m_NearPlane: 0.2
     m_CullingMatrixOverride:
       e00: 1
