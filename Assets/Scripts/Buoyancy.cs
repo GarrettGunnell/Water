@@ -285,7 +285,7 @@ public class Buoyancy : MonoBehaviour {
                         Vector3 worldPos = this.transform.TransformPoint(voxels[x,y,z].position);
 
                         float waterLevel = voxels[x,y,z].isReceiver ? voxels[x,y,z].GetWaterHeight() : voxels[x,0,z].GetWaterHeight();
-                        float depth = waterLevel - worldPos.y;
+                        float depth = waterLevel - worldPos.y + voxelHeight;
                         float submergedFactor = Mathf.Clamp(depth / voxelHeight, 0.0f, 1.0f);
                         submergedVolume += submergedFactor;
 
@@ -302,9 +302,9 @@ public class Buoyancy : MonoBehaviour {
             this.rigidBody.drag = Mathf.Lerp(minimumDrag, 1.0f, submergedVolume);
             this.rigidBody.angularDrag = Mathf.Lerp(minimumAngularDrag, 1.0f, submergedVolume);
 
-            Vector3 fakePos = this.transform.position;
-            fakePos.y = voxels[0,0,0].GetWaterHeight();
-            this.transform.position = fakePos;
+            // Vector3 fakePos = this.transform.position;
+            // fakePos.y = voxels[0,0,0].GetWaterHeight();
+            // this.transform.position = fakePos;
         }
     }
 

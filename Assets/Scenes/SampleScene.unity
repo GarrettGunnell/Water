@@ -469,7 +469,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: ba836e03ed0a85d4889533b6dc1e27e3, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -6.77
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ba836e03ed0a85d4889533b6dc1e27e3, type: 3}
       propertyPath: m_LocalPosition.y
@@ -568,7 +568,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 308764988}
   serializedVersion: 4
-  m_Mass: 0.75
+  m_Mass: 1.5
   m_Drag: 0
   m_AngularDrag: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
@@ -1106,6 +1106,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: ba836e03ed0a85d4889533b6dc1e27e3, type: 3}
       propertyPath: m_Name
       value: buoy2 (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: ba836e03ed0a85d4889533b6dc1e27e3, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1663,6 +1667,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: buoy2 (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: ba836e03ed0a85d4889533b6dc1e27e3, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -1881,7 +1889,7 @@ MonoBehaviour:
   normalizedVoxelSize: 0.2
   onlyReadbackBottomVoxels: 0
   minimumDrag: 0
-  minimumAngularDrag: 0.05
+  minimumAngularDrag: 0.5
   stiffness: 1
   angularStiffness: 1
   directionalStrength: 1
@@ -1956,7 +1964,7 @@ MonoBehaviour:
   normalizedVoxelSize: 0.2
   onlyReadbackBottomVoxels: 1
   minimumDrag: 0
-  minimumAngularDrag: 0.05
+  minimumAngularDrag: 0.5
   stiffness: 1
   angularStiffness: 1
   directionalStrength: 1
@@ -2112,6 +2120,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: ba836e03ed0a85d4889533b6dc1e27e3, type: 3}
       propertyPath: m_Name
       value: buoy2 (3)
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: ba836e03ed0a85d4889533b6dc1e27e3, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
