@@ -119,9 +119,9 @@ public class Buoyancy : MonoBehaviour {
                     point.Scale(new Vector3(x + 0.5f, y + 0.5f, z + 0.5f));
                     point += bounds.min;
 
-                    voxels[x,y,z] = new Voxel(this.transform.InverseTransformPoint(point), waterSource, onlyReadbackBottomVoxels && y == 0);
+                    voxels[x,y,z] = new Voxel(this.transform.InverseTransformPoint(point), waterSource, onlyReadbackBottomVoxels ? y == 0 : true);
 
-                    if (onlyReadbackBottomVoxels && y == 0) receiverVoxels.Add(new Vector3(x, y, z));
+                    if (voxels[x,y,z].isReceiver) receiverVoxels.Add(new Vector3(x, y, z));
                 }
             }
         }
@@ -136,7 +136,7 @@ public class Buoyancy : MonoBehaviour {
         targetRotation = Quaternion.identity;
         cachedDirections = new Queue<Vector3>();
 
-        CreateVoxels();
+        //CreateVoxels();
     }
 
     // Taken from https://github.com/zalo/MathUtilities/blob/master/Assets/LeastSquares/LeastSquaresFitting.cs
@@ -204,7 +204,11 @@ public class Buoyancy : MonoBehaviour {
     }
 
     void Update() {
-        if (waterSource == null || voxels == null) return;
+        if (waterSource == null) return;
+        if (voxels == null && waterSource.GetBuoyancyData() == null) return;
+        if (voxels == null && waterSource.GetBuoyancyData() != null) CreateVoxels(); // Unity is being weird and sometimes randomly the FFT water returns a null rendertex when trying to create the voxels in OnEnable
+
+
         if (simulationType == SimulationType.PlaneFitApproximation && !rigidBody.isKinematic) rigidBody.isKinematic = true;
         if (simulationType == SimulationType.Legitimate && rigidBody.isKinematic) rigidBody.isKinematic = false;
 
@@ -256,10 +260,16 @@ public class Buoyancy : MonoBehaviour {
             if (localAngularDistance > angleThreshold)
                 this.transform.rotation = Quaternion.RotateTowards(this.transform.rotation, avgRotation, Mathf.Max(0.0f, localAngularDistance - aa * Time.deltaTime) * 0.01f);
            
+            
+            // Vector3 fakePos = this.transform.position;
+            // fakePos.y = voxels[0,0,0].GetWaterHeight();
+            // this.transform.position = fakePos;
         }
     }
 
     void FixedUpdate() {
+        if (voxels == null) return;
+
         if (simulationType == SimulationType.Legitimate) {
             float volume = cachedCollider.bounds.size.x * cachedCollider.bounds.size.y * cachedCollider.bounds.size.z;
             float density = rigidBody.mass / volume;
@@ -291,6 +301,10 @@ public class Buoyancy : MonoBehaviour {
 
             this.rigidBody.drag = Mathf.Lerp(minimumDrag, 1.0f, submergedVolume);
             this.rigidBody.angularDrag = Mathf.Lerp(minimumAngularDrag, 1.0f, submergedVolume);
+
+            Vector3 fakePos = this.transform.position;
+            fakePos.y = voxels[0,0,0].GetWaterHeight();
+            this.transform.position = fakePos;
         }
     }
 
@@ -300,15 +314,16 @@ public class Buoyancy : MonoBehaviour {
 
     private void OnDrawGizmos() {
         if (this.voxels != null) {
-            Fit.Plane(points, out origin, out direction, 50, true);
-        //     for (int x = 0; x < voxelsPerAxis; ++x) {
-        //         for (int y = 0; y < voxelsPerAxis; ++y) {
-        //             for (int z = 0; z < voxelsPerAxis; ++z) {
-        //                 Gizmos.color = this.voxels[x,y,z].isReceiver ? Color.green : Color.red;
-        //                 Gizmos.DrawCube(this.transform.TransformPoint(this.voxels[x,y,z].position), this.voxelSize * 0.8f);
-        //             }
-        //         }
-        //     }
+//            Fit.Plane(points, out origin, out direction, 50, true);
+
+            for (int x = 0; x < voxelsPerAxis; ++x) {
+                for (int y = 0; y < voxelsPerAxis; ++y) {
+                    for (int z = 0; z < voxelsPerAxis; ++z) {
+                        Gizmos.color = this.voxels[x,y,z].isReceiver ? Color.green : Color.red;
+                        Gizmos.DrawCube(this.transform.TransformPoint(this.voxels[x,y,z].position), this.voxelSize * 0.8f);
+                    }
+                }
+            }
         }
     }
 }
